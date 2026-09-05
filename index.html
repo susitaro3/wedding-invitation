@@ -1,10 +1,100 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>小泉竜馬・大西美保夏 結婚式のご案内</title><style>
-:root{--ink:#3d3435;--rose:#a75467;--pale:#fff9f7;--line:#eadbdd}*{box-sizing:border-box}body{margin:0;color:var(--ink);background:var(--pale);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif}main{width:min(680px,calc(100% - 32px));margin:32px auto 64px;padding:36px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px #bba4a633}.eyebrow{color:var(--rose);letter-spacing:.16em;font-size:.78rem;text-align:center}h1{font-family:serif;text-align:center;font-size:1.8rem;font-weight:500;margin:12px 0 26px}.details{padding:19px;text-align:center;line-height:1.85;background:#fff7f7;border-radius:10px}h2{margin:34px 0 12px;font-size:1.1rem}label{display:block;margin:11px 0;line-height:1.55}.required{color:#b23c51;font-size:.8rem}textarea{width:100%;padding:11px;border:1px solid #cdbfc1;border-radius:7px;font:inherit;min-height:95px;resize:vertical}.choice{display:flex;gap:18px;flex-wrap:wrap}.checks{padding:10px 14px;background:#fcf9f8;border-radius:7px}button{width:100%;margin-top:26px;border:0;border-radius:8px;padding:14px;color:#fff;background:var(--rose);font:inherit;font-weight:bold;cursor:pointer}button:disabled{opacity:.55;cursor:wait}#notice{margin-top:17px;text-align:center;white-space:pre-line}.hidden{display:none}.invalid{text-align:center;padding:25px 0}.small{color:#72696a;font-size:.84rem}@media(max-width:480px){main{padding:24px}}
-</style></head><body><main id="app">招待状を読み込んでいます…</main><iframe id="reply" name="reply" hidden></iframe><script src="config.js"></script><script>
-const app=document.querySelector('#app'), token=new URLSearchParams(location.search).get('id')||'';
-const esc=t=>{const d=document.createElement('div');d.textContent=t||'';return d.innerHTML};
-function fail(msg){app.innerHTML=`<div class="invalid"><h1>ご案内を表示できません</h1><p>${esc(msg)}</p></div>`}
-function load(){if(!token||!window.WEDDING_API_URL||WEDDING_API_URL.startsWith('PASTE_'))return fail('招待URLまたはサイト設定を確認してください。');const cb='invitationLoaded';window[cb]=d=>{s.remove();render(d)};const s=document.createElement('script');s.src=`${WEDDING_API_URL}?action=invitation&id=${encodeURIComponent(token)}&callback=${cb}`;s.onerror=()=>fail('読み込めませんでした。時間をおいてお試しください。');document.head.append(s)}
-function render(d){if(!d.ok)return fail(d.message||'招待URLを確認してください。');const candidates=d.predefinedProxies.map(n=>`<label><input type="checkbox" name="proxy" value="${esc(n)}"> ${esc(n)}</label>`).join('')||'<p class="small">事前登録の代理出席者はいません。</p>';app.innerHTML=`<div class="eyebrow">WEDDING INVITATION</div><h1>${esc(d.groom)} ・ ${esc(d.bride)}</h1><div class="details">${esc(d.guestName)} 様<br><strong>${esc(d.eventDate)}</strong><br>${esc(d.venue)}</div><p class="small">ご回答期限：${esc(d.replyDeadline)}　ご都合をお聞かせください。</p><form id="form" action="${esc(WEDDING_API_URL)}" method="post" target="reply"><input type="hidden" id="payload" name="payload"><h2>出欠 <span class="required">必須</span></h2><div class="choice"><label><input required type="radio" name="attendance" value="出席"> 出席します</label><label><input required type="radio" name="attendance" value="欠席"> 欠席します</label></div><section id="attending"><h2>代理出席者</h2><p class="small">同伴・代理で出席される方がいれば選択してください。</p><div class="checks">${candidates}</div><label>上記以外の代理出席者（任意・1名ずつ改行）<textarea id="custom" placeholder="例：山田 花子"></textarea></label><h2>アレルギー・食事制限</h2><textarea id="allergies" placeholder="該当がない場合は空欄で構いません。"></textarea></section><h2>メッセージ（任意）</h2><textarea id="message" placeholder="お祝いのメッセージなど"></textarea><button>回答を登録する</button><div id="notice"></div></form>`;const f=document.querySelector('#form'),a=document.querySelector('#attending');f.onchange=()=>a.classList.toggle('hidden',f.elements.attendance.value==='欠席');f.onsubmit=()=>{const attendance=f.elements.attendance.value,selected=attendance==='出席'?[...document.querySelectorAll('[name=proxy]:checked')].map(x=>x.value):[];document.querySelector('#payload').value=JSON.stringify({token,attendance,selectedProxies:selected,customProxies:attendance==='出席'?document.querySelector('#custom').value.split(/\r?\n/):[],allergies:attendance==='出席'?document.querySelector('#allergies').value:'',message:document.querySelector('#message').value});f.querySelector('button').disabled=true;document.querySelector('#notice').textContent='登録しています…'}}
-addEventListener('message',e=>{if(e.source!==document.querySelector('#reply').contentWindow||!e.data||e.data.type!=='wedding-response')return;const r=e.data.result,n=document.querySelector('#notice'),f=document.querySelector('#form');if(r.ok){n.textContent=r.emailSent?'ご回答を登録しました。確認メールをお送りしました。':'ご回答を登録しました。';f.querySelectorAll('input,textarea,button').forEach(x=>x.disabled=true)}else{n.textContent='登録できませんでした：'+(r.message||'時間をおいてお試しください。');f.querySelector('button').disabled=false}});load();
-</script></body></html>
+const CONFIG = {
+  spreadsheetId: '', // スプレッドシートに紐付けたスクリプトなら空欄
+  eventDate: '2027年2月11日（木・祝）', venue: 'カサ・デ・アンジェラ青山',
+  groom: '小泉竜馬', bride: '大西美保夏', replyDeadline: '2026年12月31日',
+  replyToEmail: ''
+};
+
+// GitHub Pages は JSONP で、招待状の表示に必要な情報のみを読み込みます。
+function doGet(e) {
+  // doGet はURLアクセス時にだけ呼ばれる関数です。エディタから直接実行しないでください。
+  if (!e || !e.parameter) {
+    return ContentService.createTextOutput('このURLは招待状ページから利用してください。');
+  }
+  const callback = validCallback_(e.parameter.callback);
+  let response;
+  try {
+    if (e.parameter.action !== 'invitation') throw new Error('不正なリクエストです。');
+    const guest = findGuest_(e.parameter.id);
+    if (!guest) throw new Error('招待URLを確認してください。');
+    response = {ok:true, guestName:guest.name, predefinedProxies:guest.proxies,
+      eventDate:CONFIG.eventDate, venue:CONFIG.venue, groom:CONFIG.groom,
+      bride:CONFIG.bride, replyDeadline:CONFIG.replyDeadline};
+  } catch (error) { response = {ok:false, message:error.message}; }
+  return ContentService.createTextOutput(callback + '(' + JSON.stringify(response) + ')')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+// 回答は hidden iframe 経由のフォームPOSTで受信するため、CORS設定は不要です。
+function doPost(e) {
+  let result;
+  try { result = saveResponse_(JSON.parse(e.parameter.payload || '{}')); }
+  try {
+    if (!e || !e.parameter) throw new Error('回答フォームから送信してください。');
+    result = saveResponse_(JSON.parse(e.parameter.payload || '{}'));
+  }
+  catch (error) { result = {ok:false, message:error.message || '登録に失敗しました。'}; }
+  return HtmlService.createHtmlOutput('<script>window.top.postMessage(' +
+    JSON.stringify({type:'wedding-response', result:result}) + ',"*");</script>');
+}
+
+function setup() {
+  const ss = spreadsheet_();
+  sheet_(ss, 'Guests', ['Token','GuestName','Email','PredefinedProxies','Notes','CreatedAt']);
+  sheet_(ss, 'Responses', ['SubmittedAt','Token','GuestName','Email','Attendance','PredefinedProxies','CustomProxies','Allergies','Message','MailSentAt']);
+  const responses = sheet_(ss, 'Responses', ['SubmittedAt','Token','GuestName','Email','Attendance','PredefinedProxies','CustomProxies','Allergies','Message','MailSentAt']);
+  addMissingHeaders_(responses, ['RegistrantEmail','Phone']);
+}
+
+function saveResponse_(form) {
+  if (!form.token) throw new Error('招待URLが正しくありません。');
+  const guest = findGuest_(form.token);
+  if (!guest) throw new Error('この招待URLは無効です。');
+  if (!['出席','欠席'].includes(form.attendance)) throw new Error('出欠を選択してください。');
+  const contactEmail = text_(form.contactEmail).toLowerCase();
+  const phone = text_(form.phone);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) throw new Error('メールアドレスを確認してください。');
+  if (phone.length < 8) throw new Error('電話番号を確認してください。');
+  const selected = strings_(form.selectedProxies), custom = strings_(form.customProxies);
+  const allergies = text_(form.allergies), message = text_(form.message), sh = spreadsheet_().getSheetByName('Responses');
+  const row = [new Date(), guest.token, guest.name, guest.email, form.attendance,
+    selected.join('、'),custom.join('、'),allergies,message,''];
+    selected.join('、'),custom.join('、'),allergies,message,'',contactEmail,phone];
+  const existing = responseRow_(sh, guest.token);
+  if (existing) sh.getRange(existing,1,1,row.length).setValues([row]); else sh.appendRow(row);
+  let emailSent = false;
+  if (guest.email) try {
+    sendMail_(guest, form.attendance, selected.concat(custom), allergies);
+  try {
+    sendMail_(guest, contactEmail, form.attendance, selected.concat(custom), allergies);
+    sh.getRange(existing || sh.getLastRow(),10).setValue(new Date()); emailSent = true;
+  } catch (error) { console.error(error); }
+  return {ok:true, emailSent:emailSent};
+}
+
+function sendMail_(guest, attendance, proxies, allergies) {
+function sendMail_(guest, contactEmail, attendance, proxies, allergies) {
+  const body = [guest.name+' 様','','結婚式へのご回答を受け付けました。','',
+    '出欠：'+attendance,'代理出席者：'+(proxies.join('、') || 'なし'),
+    'アレルギー・食事制限：'+(allergies || 'なし'),'',
+    '新郎 '+CONFIG.groom+'　新婦 '+CONFIG.bride,'日時：'+CONFIG.eventDate,
+    '会場：'+CONFIG.venue,'','変更がある場合は、招待URLから再度ご登録ください。'].join('\n');
+  MailApp.sendEmail(guest.email,'【結婚式】ご回答を受け付けました',body,
+  MailApp.sendEmail(contactEmail,'【結婚式】ご回答を受け付けました',body,
+    CONFIG.replyToEmail ? {replyTo:CONFIG.replyToEmail} : {});
+}
+
+function findGuest_(token) {
+  const sh = spreadsheet_().getSheetByName('Guests'); if (!sh || sh.getLastRow()<2) return null;
+  const target=String(token||'').trim(), values=sh.getRange(2,1,sh.getLastRow()-1,4).getDisplayValues();
+  for (const row of values) if (row[0].trim()===target) return {token:row[0].trim(),name:row[1].trim(),email:row[2].trim(),proxies:row[3].split(/[、,\n]/).map(x=>x.trim()).filter(Boolean)};
+  return null;
+}
+function responseRow_(sh, token) { if(sh.getLastRow()<2)return 0; const i=sh.getRange(2,2,sh.getLastRow()-1).getDisplayValues().findIndex(r=>r[0].trim()===token); return i<0?0:i+2; }
+function spreadsheet_(){return CONFIG.spreadsheetId?SpreadsheetApp.openById(CONFIG.spreadsheetId):SpreadsheetApp.getActiveSpreadsheet();}
+function sheet_(ss,name,headers){const sh=ss.getSheetByName(name)||ss.insertSheet(name);if(!sh.getLastRow())sh.appendRow(headers);sh.setFrozenRows(1);sh.getRange(1,1,1,headers.length).setFontWeight('bold').setBackground('#f6e7e9');}
+function sheet_(ss,name,headers){const sh=ss.getSheetByName(name)||ss.insertSheet(name);if(!sh.getLastRow())sh.appendRow(headers);sh.setFrozenRows(1);sh.getRange(1,1,1,sh.getLastColumn()).setFontWeight('bold').setBackground('#f6e7e9');return sh;}
+function addMissingHeaders_(sh,headers){const existing=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];headers.forEach(header=>{if(!existing.includes(header)){sh.getRange(1,sh.getLastColumn()+1).setValue(header);existing.push(header);}});}
+function validCallback_(name){if(!/^[A-Za-z_$][A-Za-z0-9_$]{0,64}$/.test(String(name||'')))throw new Error('不正なコールバックです。');return name;}
+function text_(v){return String(v||'').trim().slice(0,1000);}
+function strings_(values){return(Array.isArray(values)?values:[]).map(text_).filter(Boolean).slice(0,10);}
