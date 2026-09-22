@@ -1,10 +1,301 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>結婚式のご案内</title><style>body{margin:0;background:#fff9f7;color:#3d3435;font-family:Meiryo,sans-serif}main{max-width:680px;margin:32px auto;padding:32px;background:#fff;border:1px solid #eadbdd;border-radius:16px}h1{text-align:center;font-family:serif}h2{margin-top:30px;font-size:1.1rem}.details,.group{padding:16px;background:#fff7f7;border-radius:8px}.group{display:flex;align-items:center;gap:8px;margin-bottom:8px}.group span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.group button{width:auto;padding:8px 12px;margin-top:0;font-size:0.85rem}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:block;margin:10px 0}input,textarea,select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cdbfc1;border-radius:6px;font:inherit}textarea{min-height:80px}.radio label,.checks label{display:inline-block;width:auto;margin-right:18px}button{width:100%;padding:14px;background:#a75467;color:#fff;border:0;border-radius:8px;font-weight:bold;margin-top:24px}.hidden{display:none}.note{text-align:center;margin-top:16px}.admin-note{color:#d32f2f;font-size:0.85rem;margin:8px 0}footer{text-align:right;font-size:0.7rem;color:#999;margin-top:40px;max-width:680px;margin:32px auto;padding:0 32px}@media(max-width:500px){main{margin:16px;padding:22px}.grid{grid-template-columns:1fr}footer{padding:0 22px}}</style></head><body><main id="app">読み込んでいます…</main><footer id="footer"></footer><script src="config.js"></script><script>
-const VERSION = '1.4.1';
-const app=document.querySelector('#app'),footer=document.querySelector('#footer'),token=new URLSearchParams(location.search).get('id')||'',e=t=>{const d=document.createElement('div');d.textContent=t||'';return d.innerHTML};
-if(footer) footer.textContent = 'v' + VERSION;
-function fail(x){app.innerHTML='<h1>ご案内を表示できません</h1><p class="note">'+e(x)+'</p>'}function load(){if(!token||!window.WEDDING_API_URL||WEDDING_API_URL.startsWith('PASTE_'))return fail('招待URLまたはサイト設定を確認してください。');const cb='invitationLoaded',timer=setTimeout(()=>fail('招待情報を取得できませんでした。Apps Script の公開設定と /exec URL を確認してください。'),10000);window[cb]=d=>{clearTimeout(timer);s.remove();render(d)};const s=document.createElement('script');s.src=`${WEDDING_API_URL}?action=invitation&id=${encodeURIComponent(token)}&callback=${cb}`;s.onerror=()=>{clearTimeout(timer);fail('読み込めませんでした。')};document.head.append(s)}
-function render(d){if(!d.ok)return fail(d.message);if(!d.guest)return fail('Apps Script の公開バージョンが古いようです。Code.gs を更新し、新しいバージョンとして再デプロイしてください。');const p=d.guest.profile||{},v=k=>e(p[k]||'');app.innerHTML=`<h1>${e(d.groom)} ・ ${e(d.bride)}</h1><div class="details">${e(d.guest.name)} 様<br><b>${e(d.eventDate)}</b><br>${e(d.venue)}</div><p>回答期限：${e(d.replyDeadline)}</p><form id="f"><h2>出欠</h2><div class="radio"><label><input required type="radio" name="attendance" value="出席">出席します</label><label><input required type="radio" name="attendance" value="欠席">欠席します</label></div><div id="attFields" class="hidden"><h2>ゲスト情報</h2><div class="grid"><label>姓<input required id="lastName" value="${v('lastName')}"></label><label>名<input required id="firstName" value="${v('firstName')}"></label><label>せい（よみがな）<input required id="lastNameKana" value="${v('lastNameKana')}"></label><label>めい（よみがな）<input required id="firstNameKana" value="${v('firstNameKana')}"></label></div><div class="radio"><label><input required type="radio" name="side" value="新郎側" ${p.side==='新郎側'?'checked':''}>新郎側</label><label><input required type="radio" name="side" value="新婦側" ${p.side==='新婦側'?'checked':''}>新婦側</label></div><label>年齢区分<select required id="ageCategory"><option value="">選択してください</option>${['大人','子供','幼児'].map(x=>`<option ${p.ageCategory===x?'selected':''}>${x}</option>`).join('')}</select></label><h2>連絡先・住所</h2><label>メールアドレス<input required type="email" id="email" value="${v('email')}"></label><label>郵便番号<input required id="postalCode" value="${v('postalCode')}"></label><label>住所<input required id="address" value="${v('address')}"></label><label>建物名・部屋番号（任意）<input id="building" value="${v('building')}"></label><label>電話番号<input required type="tel" id="phone" value="${v('phone')}"></label><h2>アレルギー・食事制限</h2><textarea id="allergies"></textarea><section id="attSection"></section></div><h2>メッセージ（任意）</h2><textarea id="message"></textarea><button type="submit" id="submitBtn">回答を登録する</button><div class="note" id="notice"></div></form>`;const f=document.querySelector('#f'),attFields=document.querySelector('#attFields');f.onchange=()=>{const isAbsence=f.attendance.value==='欠席';attFields.classList.toggle('hidden',isAbsence);attFields.querySelectorAll('input,select,textarea').forEach(el=>el.disabled=isAbsence)};f.onsubmit=async e=>{e.preventDefault();if(!f.checkValidity()){f.reportValidity();return;}const btn=document.querySelector('#submitBtn'),notice=document.querySelector('#notice');btn.disabled=true;notice.textContent='登録しています…';const q=id=>document.querySelector('#'+id)?.value||'',attendance=f.attendance.value,payload={token,attendance,message:q('message')};if(attendance==='出席'){payload.profile={lastName:q('lastName'),firstName:q('firstName'),lastNameKana:q('lastNameKana'),firstNameKana:q('firstNameKana'),side:f.side.value,ageCategory:q('ageCategory'),email:q('email'),postalCode:q('postalCode'),address:q('address'),building:q('building'),phone:q('phone'),allergies:q('allergies')};if(window.getProxyData){const pData=window.getProxyData();payload.proxyGuests=pData.proxyGuests;payload.selectedProxies=pData.selectedProxies;}}console.log('Final payload (v'+VERSION+'):',payload);try{const formData=new URLSearchParams();formData.append('payload',JSON.stringify(payload));await fetch(window.WEDDING_API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData});app.innerHTML='<h1>ご登録ありがとうございました</h1><p class="note">ご回答を受け付けました。確認メールが届かない場合は、迷惑メールフォルダもご確認ください。</p>'}catch(err){console.error('Submit error:',err);notice.textContent='送信エラーが発生しました。時間をおいて再度お試しください。';btn.disabled=false}}}
-load();
-</script><script>
-(function(){const baseRender=window.render;window.render=function(d){try{baseRender(d);if(!d.guest)return;const f=document.querySelector('#f'),primary=d.guest.profile,stored=d.guest.proxyGuests||[];let rows=[...stored];d.guest.predefinedProxies.forEach((n,i)=>{const id='fixed-'+i;if(!rows.some(x=>String(x.id)===id)){rows.push({id,predefined:true,label:n,profile:{...primary,lastName:n,firstName:'',lastNameKana:'',firstNameKana:'',allergies:''}})}});const target=document.querySelector('#attSection');if(!target)return;target.innerHTML='<h2>代理出席者</h2><div id="proxyGrid"></div><p class="admin-note" style="margin-top:10px">※お名前の変更や追加は、新郎新婦までご連絡ください。</p>';const grid=target.querySelector('#proxyGrid');let dialog=document.getElementById('proxyDialog');if(!dialog){dialog=document.createElement('dialog');dialog.id='proxyDialog';dialog.innerHTML='<h2>代理出席者を編集</h2><p class="admin-note">※新郎新婦の承認後に正式な参加となります。</p><div class="grid"><label>姓<input id="pxLastName"></label><label>名<input id="pxFirstName"></label><label>せい<input id="pxLastNameKana"></label><label>めい<input id="pxFirstNameKana"></label></div><label>新郎側／新婦側<select id="pxSide"><option>新郎側</option><option>新婦側</option></select></label><label>年齢区分<select id="pxAgeCategory"><option>大人</option><option>子供</option><option>幼児</option></select></label><label>メール<input id="pxEmail" type="email"></label><label>郵便番号<input id="pxPostalCode"></label><label>住所<input id="pxAddress"></label><label>建物名<input id="pxBuilding"></label><label>電話番号<input id="pxPhone"></label><label>アレルギー・食事制限<textarea id="pxAllergies"></textarea></label><button type="button" id="saveProxy">保存</button>';document.body.append(dialog)}const saveBtn=dialog.querySelector('#saveProxy');let editing=null;const keys=['lastName','firstName','lastNameKana','firstNameKana','side','ageCategory','email','postalCode','address','building','phone','allergies'];function draw(){grid.innerHTML=rows.map((r,i)=>'<div class="group"><span>'+e(r.label||((r.profile.lastName||'未入力')+' '+(r.profile.firstName||'')))+'</span><div style="display:flex;gap:4px;"><button type="button" data-edit="'+i+'">編集</button></div></div>').join('');grid.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(+b.dataset.edit))}function edit(i){editing=i;const p=rows[i].profile;keys.forEach(k=>{const el=dialog.querySelector('#px'+k[0].toUpperCase()+k.slice(1));if(el)el.value=p[k]||''});dialog.showModal()}saveBtn.onclick=async()=>{const p={};keys.forEach(k=>{const el=dialog.querySelector('#px'+k[0].toUpperCase()+k.slice(1));if(el)p[k]=el.value});const originalText=saveBtn.textContent;saveBtn.disabled=true;saveBtn.textContent='保存中...';try{const proxyGuest={id:rows[editing].id,predefined:rows[editing].predefined,profile:p};const payload={action:'saveProxy',token:token,proxyGuest:proxyGuest};console.log('Sending individual proxy save request (v'+VERSION+'):',proxyGuest.profile.lastName);const formData=new URLSearchParams();formData.append('payload',JSON.stringify(payload));await fetch(window.WEDDING_API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData});rows[editing].profile=p;dialog.close();draw()}catch(err){console.error('Save proxy error:',err);alert('保存に失敗しました。')}finally{saveBtn.disabled=false;saveBtn.textContent=originalText}};window.getProxyData=()=>{return {proxyGuests:rows,selectedProxies:rows.map(r=>[r.profile.lastName,r.profile.firstName].filter(Boolean).join(' '))};};draw()}catch(e){console.error('Extension error:',e)}}})();
-</script></body></html>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>結婚式のご案内 - Wedding Invitation</title>
+
+  <!-- Webフォント（Shippori Mincho & Noto Sans JP） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ヘッダー / ヒーローセクション -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-subtitle">Wedding Invitation</div>
+      <h1 class="hero-title">結婚式のご案内</h1>
+      <div class="couple-names" id="coupleNamesDisplay">新郎 太郎 &amp; 新婦 花子</div>
+
+      <div class="invitation-text">
+        皆様におかれましては ますますご清祥のこととお慶び申し上げます<br>
+        このたび 私たちは結婚式を挙げることとなりました<br>
+        日頃お世話になっております皆様をお招きして<br>
+        ささやかな宴を催したく存じます<br>
+        ご多用中 誠に恐縮ではございますが<br>
+        ぜひご出席くださいますようご案内申し上げます
+      </div>
+
+      <div class="info-box">
+        <div class="info-item">
+          <span class="info-label">日時：</span>
+          <span class="info-value" id="weddingDateDisplay">2026年10月10日（土）</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">時間：</span>
+          <span class="info-value" id="receptionTimeDisplay">開場 11:30 / 挙式 12:00 / 披露宴 13:00</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">場所：</span>
+          <span class="info-value" id="venueNameDisplay">グランドホテル東京 鳳凰の間</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">住所：</span>
+          <span class="info-value" id="venueAddressDisplay">東京都千代田区1-1-1</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">回答期日：</span>
+          <span class="info-value" id="responseDeadlineDisplay">2026年9月1日（火）まで</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="container">
+
+    <!-- ① ローディング画面 -->
+    <div id="loadingContainer" class="loading-container">
+      <div class="spinner"></div>
+      <p>招待状データを読み込んでいます...</p>
+    </div>
+
+    <!-- ② エラー画面 (トークン無効時など) -->
+    <div id="errorCard" class="error-card hidden">
+      <div class="error-title">招待状URLをご確認ください</div>
+      <p id="errorMessageText">無効なURLまたはトークンが指定されていません。お送りした招待状メッセージのURLをご確認ください。</p>
+    </div>
+
+    <!-- ③ 完了画面 (回答完了時) -->
+    <div id="successCard" class="card success-card hidden">
+      <div class="success-icon">✦</div>
+      <h2 class="success-title">ご回答ありがとうございました</h2>
+      <p class="success-message">
+        ご回答内容を受け付けいたしました。<br>
+        皆様とお会いできることを心より楽しみにしております。
+      </p>
+      <div id="submittedSummaryBox" class="info-box" style="text-align: left; margin-top: 20px;">
+        <!-- 送信済みの回答概要がここに表示されます -->
+      </div>
+    </div>
+
+    <!-- ④ 回答フォーム -->
+    <form id="rsvpForm" class="hidden" novalidate>
+
+      <!-- 出欠選択 -->
+      <section class="card">
+        <h2 class="section-title">
+          ご出欠の確認
+          <span class="required-badge">必須</span>
+        </h2>
+
+        <div class="attendance-selector">
+          <label class="attendance-option">
+            <input type="radio" name="attendance" value="出席" required>
+            <span class="attendance-btn">
+              <span class="btn-title">ご出席</span>
+              <span class="btn-sub">ATTEND</span>
+            </span>
+          </label>
+
+          <label class="attendance-option">
+            <input type="radio" name="attendance" value="欠席" required>
+            <span class="attendance-btn">
+              <span class="btn-title">ご欠席</span>
+              <span class="btn-sub">DECLINE</span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- ゲスト基本情報 (スプレッドシートから自動取得) -->
+      <section class="card" id="guestInfoSection">
+        <h2 class="section-title">
+          ご芳名（ゲスト情報）
+          <span class="required-badge">必須</span>
+        </h2>
+
+        <!-- 漢字 姓・名 -->
+        <div class="input-row">
+          <div class="form-group">
+            <label class="form-label" for="lastName">姓</label>
+            <input type="text" id="lastName" name="lastName" placeholder="例: 山田" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="firstName">名</label>
+            <input type="text" id="firstName" name="firstName" placeholder="例: 太郎" required>
+          </div>
+        </div>
+
+        <!-- かな せい・めい -->
+        <div class="input-row">
+          <div class="form-group">
+            <label class="form-label" for="kanaLastName">せい（よみがな）</label>
+            <input type="text" id="kanaLastName" name="kanaLastName" placeholder="例: やまだ" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="kanaFirstName">めい（よみがな）</label>
+            <input type="text" id="kanaFirstName" name="kanaFirstName" placeholder="例: たろう" required>
+          </div>
+        </div>
+
+        <!-- 新郎側/新婦側 & 年齢区分 (出席時のみ表示) -->
+        <div id="guestMetaFields" class="input-row">
+          <div class="form-group">
+            <label class="form-label">新郎側・新婦側</label>
+            <div class="radio-inline-group">
+              <label class="radio-inline-label">
+                <input type="radio" name="side" value="新郎側"> 新郎側
+              </label>
+              <label class="radio-inline-label">
+                <input type="radio" name="side" value="新婦側"> 新婦側
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ageCategory">年齢区分</label>
+            <select id="ageCategory" name="ageCategory">
+              <option value="大人">大人</option>
+              <option value="子供">子供（小学生以下）</option>
+              <option value="幼児">幼児（座席・食事なし）</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- 連絡先・住所情報 (出席時のみ表示) -->
+      <section class="card" id="contactSection">
+        <h2 class="section-title">
+          ご連絡先・ご住所
+          <span class="required-badge">必須</span>
+        </h2>
+
+        <!-- メールアドレス -->
+        <div class="form-group">
+          <label class="form-label" for="email">メールアドレス</label>
+          <input type="email" id="email" name="email" placeholder="example@domain.com">
+        </div>
+
+        <!-- 郵便番号 + 自動入力ボタン -->
+        <div class="form-group">
+          <label class="form-label" for="postalCode">郵便番号</label>
+          <div class="postal-group">
+            <input type="text" id="postalCode" name="postalCode" placeholder="1000001 (ハイフンなし可)" maxlength="8">
+            <button type="button" id="btnSearchPostal" class="btn-secondary">住所自動入力</button>
+          </div>
+          <div class="form-subtext">※7桁の数字を入力し「住所自動入力」を押すと住所が入ります</div>
+        </div>
+
+        <!-- 住所 -->
+        <div class="form-group">
+          <label class="form-label" for="address">住所</label>
+          <input type="text" id="address" name="address" placeholder="都道府県・市区町村・番地">
+        </div>
+
+        <!-- 建物名・部屋番号 -->
+        <div class="form-group">
+          <label class="form-label" for="building">
+            建物名・部屋番号
+            <span class="optional-badge">任意</span>
+          </label>
+          <input type="text" id="building" name="building" placeholder="〇〇マンション 101号室">
+        </div>
+
+        <!-- 電話番号 -->
+        <div class="form-group">
+          <label class="form-label" for="phone">電話番号</label>
+          <input type="tel" id="phone" name="phone" placeholder="09012345678">
+        </div>
+      </section>
+
+      <!-- アレルギー・食事制限 (出席時のみ表示) -->
+      <section class="card" id="allergySection">
+        <h2 class="section-title">
+          アレルギー・食事制限
+          <span class="optional-badge">任意</span>
+        </h2>
+        <div class="form-group">
+          <label class="form-label" for="allergies">アレルギーやお控えになっている食材がございましたらご記入ください</label>
+          <textarea id="allergies" name="allergies" placeholder="例: エビアレルギー（エキスも不可）、アルコールNG など"></textarea>
+        </div>
+      </section>
+
+      <!-- 代理出席者情報 (出席時のみ表示) -->
+      <section class="card" id="proxySection">
+        <h2 class="section-title">
+          同伴者・代理出席者
+          <span class="optional-badge">任意</span>
+        </h2>
+
+        <!-- 事前定義代理出席者リスト (スプレッドシートより動的生成) -->
+        <div id="predefinedProxyWrapper" class="form-group hidden">
+          <label class="form-label">ご家族・ご同伴者様（出欠をご選択ください）</label>
+          <div id="predefinedProxyContainer" class="checkbox-group">
+            <!-- チェックボックスが動的に挿入されます -->
+          </div>
+        </div>
+
+        <!-- 画面上からの動的同伴者追加エリア (アコーディオン式) -->
+        <div class="form-group" style="margin-top: 20px;">
+          <label class="form-label">追加の同伴者様・代理出席者様</label>
+          <div class="form-subtext">同伴される方がいらっしゃる場合は「＋ 同伴者・代理出席者を追加」ボタンを押してご入力ください</div>
+
+          <div id="dynamicProxyList" class="accordion-list">
+            <!-- アコーディオンカードが動的に追加されます -->
+          </div>
+
+          <button type="button" id="btnAddProxy" class="btn-add-proxy">＋ 同伴者・代理出席者を追加</button>
+        </div>
+      </section>
+
+      <!-- お祝いメッセージ -->
+      <section class="card" id="messageSection">
+        <h2 class="section-title">
+          メッセージ
+          <span class="optional-badge">任意</span>
+        </h2>
+        <div class="form-group">
+          <label class="form-label" for="message">新郎新婦へのお祝いメッセージやご質問がございましたらご記入ください</label>
+          <textarea id="message" name="message" placeholder="ご結婚おめでとうございます！当日を楽しみにしております。"></textarea>
+        </div>
+      </section>
+
+      <!-- 送信確認ボタン -->
+      <div class="submit-container">
+        <button type="button" id="btnConfirm" class="btn-primary">入力内容を確認する</button>
+      </div>
+
+    </form>
+
+  </main>
+
+  <!-- 送信前確認モーダル -->
+  <div id="confirmModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">ご回答内容の確認</h3>
+      </div>
+      <p style="font-size: 0.88rem; color: #666; margin-bottom: 15px; text-align: center;">
+        以下の内容で送信します。よろしければ「送信する」を押してください。
+      </p>
+
+      <div id="modalSummaryList" class="summary-list">
+        <!-- 動的に回答概要が挿入されます -->
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="btnModalBack" class="btn-modal-back">修正する</button>
+        <button type="button" id="btnModalSubmit" class="btn-modal-submit">送信する</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
