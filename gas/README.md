@@ -14,7 +14,7 @@
 3. `Code.gs` の内容を消去し、プロジェクトの `gas/Code.gs` をすべて貼り付けて保存します。
 4. エディタ上部の**関数選択ドロップダウン**（`doGet` や `doPost` と並んでいる部分）で **`createWeddingSheets`** を選択し、**「実行」** ボタンを押します。
 5. アクセス許可ポップアップが表示された場合は承認してください。
-6. 一瞬で **`Tokens`**、**`PredefinedProxies`**、**`Responses`** の3つのシートが背景色付き・ヘッダー固定・サンプルデータ入りで自動構築されます！
+6. 一瞬で **`Tokens`**、**`PredefinedProxies`**（ProxyId付き）、**`Responses`** の3つのシートが背景色付き・ヘッダー固定・サンプルデータ入りで自動構築されます！
 
 ---
 
@@ -38,18 +38,19 @@
 ---
 
 ### ② `PredefinedProxies` シート（事前定義代理出席者・ご家族管理）
-管理者側で事前にトークンに紐づけて定義する代理出席者・同伴者の専用テーブルです。**1つのトークンに対して複数行（複数人）登録可能**です。
+管理者側で事前にトークンに紐づけて定義する代理出席者・同伴者の専用テーブルです。各代理出席者を一意に特定するために **`ProxyId` 列（A列）** を備えています。
 
 | 列 | ヘッダー名 | 説明 | 例 |
 |---|---|---|---|
-| A | `Token` | 紐づけるTokensシートのToken | `sample-guest-001` |
-| B | `LastName` | 姓 | `山田` |
-| C | `FirstName` | 名 | `花子` |
-| D | `KanaLastName` | せい (よみがな) | `やまだ` |
-| E | `KanaFirstName` | めい (よみがな) | `はなこ` |
-| F | `Side` | 新郎側 / 新婦側 | `新郎側` |
-| G | `AgeCategory` | 年齢区分 | `大人` （または `子供`, `幼児`） |
-| H | `Email` | メールアドレス (任意) | `hanako@example.com` |
+| A | `ProxyId` | 代理出席者管理キー【NEW!】 | `proxy-001` |
+| B | `Token` | 紐づけるTokensシートのToken | `sample-guest-001` |
+| C | `LastName` | 姓 | `山田` |
+| D | `FirstName` | 名 | `花子` |
+| E | `KanaLastName` | せい (よみがな) | `やまだ` |
+| F | `KanaFirstName` | めい (よみがな) | `はなこ` |
+| G | `Side` | 新郎側 / 新婦側 | `新郎側` |
+| H | `AgeCategory` | 年齢区分 | `大人` （または `子供`, `幼児`） |
+| I | `Email` | メールアドレス (任意) | `hanako@example.com` |
 
 ---
 

@@ -232,24 +232,12 @@
           <span class="optional-badge">任意</span>
         </h2>
 
-        <!-- 事前定義代理出席者リスト (スプレッドシートより動的生成) -->
+        <!-- 事前定義代理出席者リスト（編集用アコーディオンカードが動的生成されます） -->
         <div id="predefinedProxyWrapper" class="form-group hidden">
-          <label class="form-label">ご家族・ご同伴者様（出欠をご選択ください）</label>
-          <div id="predefinedProxyContainer" class="checkbox-group">
-            <!-- チェックボックスが動的に挿入されます -->
+          <label class="form-label">ご家族・ご同伴者様（ご出欠をご選択の上、必要に応じて詳細を修正してください）</label>
+          <div id="predefinedProxyContainer" class="accordion-list">
+            <!-- チェックボックス一体型編集カードが動的に挿入されます -->
           </div>
-        </div>
-
-        <!-- 画面上からの動的同伴者追加エリア (アコーディオン式) -->
-        <div class="form-group" style="margin-top: 20px;">
-          <label class="form-label">追加の同伴者様・代理出席者様</label>
-          <div class="form-subtext">同伴される方がいらっしゃる場合は「＋ 同伴者・代理出席者を追加」ボタンを押してご入力ください</div>
-
-          <div id="dynamicProxyList" class="accordion-list">
-            <!-- アコーディオンカードが動的に追加されます -->
-          </div>
-
-          <button type="button" id="btnAddProxy" class="btn-add-proxy">＋ 同伴者・代理出席者を追加</button>
         </div>
       </section>
 

@@ -6,7 +6,7 @@
  *    列構成: A:Token, B:LastName, C:FirstName, D:KanaLastName, E:KanaFirstName, F:Side, G:AgeCategory, H:Email, I:Status
  *
  * 2. シート名: "PredefinedProxies" （事前定義代理出席者テーブル）
- *    列構成: A:Token, B:LastName, C:FirstName, D:KanaLastName, E:KanaFirstName, F:Side, G:AgeCategory, H:Email
+ *    列構成: A:ProxyId, B:Token, C:LastName, D:FirstName, E:KanaLastName, F:KanaFirstName, G:Side, H:AgeCategory, I:Email
  *
  * 3. シート名: "Responses" （回答データ保存用）
  *    列構成: A:Timestamp, B:Token, C:Attendance, D:LastName, E:FirstName, F:KanaLastName, G:KanaFirstName, H:Side, I:AgeCategory, J:Email, K:PostalCode, L:Address, M:Building, N:Phone, O:Allergies, P:PredefinedProxiesResponse, Q:AdditionalProxies, R:Message
@@ -14,9 +14,6 @@
 
 /**
  * 🚀 スプレッドシート自動初期化・シート生成関数
- *
- * Apps Script エディタ上部の関数選択ドロップダウンで「createWeddingSheets」を選択し、
- * 「実行」ボタンを押すと、自動的に「Tokens」「PredefinedProxies」「Responses」の3シートが作成・整形されます。
  */
 function createWeddingSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -45,7 +42,7 @@ function createWeddingSheets() {
     '新婦側', '大人', 'sato@example.com', '未回答'
   ]);
 
-  // 2. PredefinedProxies シートの生成・初期化
+  // 2. PredefinedProxies シートの生成・初期化 (A列にProxyIdを追加)
   var proxySheet = ss.getSheetByName('PredefinedProxies');
   if (!proxySheet) {
     proxySheet = ss.insertSheet('PredefinedProxies');
@@ -53,19 +50,19 @@ function createWeddingSheets() {
     proxySheet.clear();
   }
   var proxyHeaders = [
-    'Token', 'LastName', 'FirstName', 'KanaLastName', 'KanaFirstName',
+    'ProxyId', 'Token', 'LastName', 'FirstName', 'KanaLastName', 'KanaFirstName',
     'Side', 'AgeCategory', 'Email'
   ];
   proxySheet.appendRow(proxyHeaders);
   formatHeaderRow(proxySheet, proxyHeaders.length, '#5bc0be');
 
-  // サンプル事前定義代理出席者データ
+  // サンプル事前定義代理出席者データ (ProxyId付き)
   proxySheet.appendRow([
-    'sample-guest-01', '山田', '花子', 'やまだ', 'はなこ',
+    'proxy-sample-01', 'sample-guest-01', '山田', '花子', 'やまだ', 'はなこ',
     '新郎側', '大人', 'hanako@example.com'
   ]);
   proxySheet.appendRow([
-    'sample-guest-01', '山田', '一郎', 'やまだ', 'いちろう',
+    'proxy-sample-02', 'sample-guest-01', '山田', '一郎', 'やまだ', 'いちろう',
     '新郎側', '子供', ''
   ]);
 
@@ -115,16 +112,18 @@ function formatHeaderRow(sheet, colCount, headerBgColor) {
 // ==========================================================================
 
 function doGet(e) {
+  var callback = e && e.parameter ? e.parameter.callback : null;
+
   try {
-    var token = e.parameter ? e.parameter.token : null;
+    var token = e && e.parameter ? e.parameter.token : null;
     if (!token) {
-      return responseJSON({ success: false, error: 'トークンが指定されていません。' });
+      return responseJSON({ success: false, error: 'トークンが指定されていません。' }, callback);
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var tokenSheet = ss.getSheetByName('Tokens');
     if (!tokenSheet) {
-      return responseJSON({ success: false, error: 'Tokensシートが見つかりません。' });
+      return responseJSON({ success: false, error: 'Tokensシートが見つかりません。「createWeddingSheets」を実行してシートを作成してください。' }, callback);
     }
 
     var tokenData = tokenSheet.getDataRange().getValues();
@@ -150,10 +149,10 @@ function doGet(e) {
     }
 
     if (!guestInfo) {
-      return responseJSON({ success: false, error: '無効なトークンです。招待状URLをご確認ください。' });
+      return responseJSON({ success: false, error: '無効なトークンです。招待状URLをご確認ください。' }, callback);
     }
 
-    // PredefinedProxies シートから一致する代理出席者リストを取得
+    // PredefinedProxies シートから一致する代理出席者リストを取得 (A列: ProxyId, B列: Token)
     var proxySheet = ss.getSheetByName('PredefinedProxies');
     var predefinedProxies = [];
 
@@ -161,17 +160,18 @@ function doGet(e) {
       var proxyData = proxySheet.getDataRange().getValues();
       for (var p = 1; p < proxyData.length; p++) {
         var pRow = proxyData[p];
-        if (pRow[0] && pRow[0].toString().trim() === token.trim()) {
+        if (pRow[1] && pRow[1].toString().trim() === token.trim()) {
           predefinedProxies.push({
+            proxyId: pRow[0] ? pRow[0].toString().trim() : ('proxy_' + p),
             token: token.trim(),
-            lastName: pRow[1] ? pRow[1].toString() : '',
-            firstName: pRow[2] ? pRow[2].toString() : '',
-            kanaLastName: pRow[3] ? pRow[3].toString() : '',
-            kanaFirstName: pRow[4] ? pRow[4].toString() : '',
-            side: pRow[5] ? pRow[5].toString() : '新郎側',
-            ageCategory: pRow[6] ? pRow[6].toString() : '大人',
-            email: pRow[7] ? pRow[7].toString() : '',
-            fullName: (pRow[1] ? pRow[1].toString() : '') + ' ' + (pRow[2] ? pRow[2].toString() : '')
+            lastName: pRow[2] ? pRow[2].toString() : '',
+            firstName: pRow[3] ? pRow[3].toString() : '',
+            kanaLastName: pRow[4] ? pRow[4].toString() : '',
+            kanaFirstName: pRow[5] ? pRow[5].toString() : '',
+            side: pRow[6] ? pRow[6].toString() : '新郎側',
+            ageCategory: pRow[7] ? pRow[7].toString() : '大人',
+            email: pRow[8] ? pRow[8].toString() : '',
+            fullName: (pRow[2] ? pRow[2].toString() : '') + ' ' + (pRow[3] ? pRow[3].toString() : '')
           });
         }
       }
@@ -217,10 +217,10 @@ function doGet(e) {
         predefinedProxies: predefinedProxies,
         existingResponse: existingResponse
       }
-    });
+    }, callback);
 
   } catch (err) {
-    return responseJSON({ success: false, error: 'サーバー処理中にエラーが発生しました: ' + err.toString() });
+    return responseJSON({ success: false, error: 'サーバー処理中にエラーが発生しました: ' + err.toString() }, callback);
   }
 }
 
@@ -276,9 +276,7 @@ function doPost(e) {
     var building = payload.building || '';
     var phone = payload.phone || '';
     var allergies = payload.allergies || '';
-    var predefinedProxiesResponse = typeof payload.predefinedProxiesResponse === 'object'
-      ? JSON.stringify(payload.predefinedProxiesResponse)
-      : (payload.predefinedProxiesResponse || '');
+    var predefinedProxiesResponse = formatPredefinedProxiesResponse(payload.predefinedProxiesResponse);
     var additionalProxies = formatAdditionalProxies(payload.additionalProxies);
     var message = payload.message || '';
 
@@ -318,6 +316,37 @@ function doPost(e) {
 }
 
 /**
+ * 事前定義代理出席者の回答データをスプレッドシート閲覧用に整列化する関数
+ */
+function formatPredefinedProxiesResponse(proxiesRaw) {
+  if (!proxiesRaw) return '';
+  if (typeof proxiesRaw === 'string') {
+    try {
+      var parsed = JSON.parse(proxiesRaw);
+      if (Array.isArray(parsed)) proxiesRaw = parsed;
+    } catch (e) {
+      return proxiesRaw;
+    }
+  }
+
+  if (Array.isArray(proxiesRaw)) {
+    return proxiesRaw.map(function(p) {
+      if (typeof p === 'string') return p;
+      var status = p.attending ? '出席' : '欠席';
+      var name = (p.lastName || '') + ' ' + (p.firstName || '');
+      var kana = (p.kanaLastName || '') + ' ' + (p.kanaFirstName || '');
+      var details = [status, p.ageCategory || '大人'];
+      if (kana.trim().length > 0) details.push('ふりがな: ' + kana.trim());
+      if (p.allergies) details.push('アレルギー: ' + p.allergies);
+      if (p.proxyId) details.push('ID: ' + p.proxyId);
+      return name.trim() + ' (' + details.join(', ') + ')';
+    }).join('\n');
+  }
+
+  return JSON.stringify(proxiesRaw);
+}
+
+/**
  * 追加同伴者オブジェクトをスプレッドシート閲覧用に綺麗に整列化する関数
  */
 function formatAdditionalProxies(addProxiesRaw) {
@@ -344,10 +373,16 @@ function formatAdditionalProxies(addProxiesRaw) {
 }
 
 /**
- * JSONレスポンスの出力処理
+ * JSONレスポンスの出力処理 (JSONP対応)
  */
-function responseJSON(obj) {
-  var output = ContentService.createTextOutput(JSON.stringify(obj));
+function responseJSON(obj, callback) {
+  var jsonStr = JSON.stringify(obj);
+  if (callback) {
+    var output = ContentService.createTextOutput(callback + '(' + jsonStr + ')');
+    output.setMimeType(ContentService.MimeType.JAVASCRIPT);
+    return output;
+  }
+  var output = ContentService.createTextOutput(jsonStr);
   output.setMimeType(ContentService.MimeType.JSON);
   return output;
 }

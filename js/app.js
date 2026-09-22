@@ -19,7 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const proxySection = document.getElementById("proxySection");
   const predefinedProxyWrapper = document.getElementById("predefinedProxyWrapper");
   const predefinedProxyContainer = document.getElementById("predefinedProxyContainer");
-  const dynamicProxyList = document.getElementById("dynamicProxyList");
 
   // Inputs
   const lastNameInput = document.getElementById("lastName");
@@ -37,7 +36,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Buttons & Modal
   const btnSearchPostal = document.getElementById("btnSearchPostal");
-  const btnAddProxy = document.getElementById("btnAddProxy");
   const btnConfirm = document.getElementById("btnConfirm");
   const confirmModal = document.getElementById("confirmModal");
   const modalSummaryList = document.getElementById("modalSummaryList");
@@ -47,7 +45,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentToken = "";
   let guestData = null;
   let predefinedProxiesList = [];
-  let proxyCardIndex = 0;
 
   // 1. CONFIG情報でヘッダーテキストを初期化
   initHeaderInfo();
@@ -76,11 +73,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 郵便番号自動入力ボタン
   btnSearchPostal.addEventListener("click", searchAddressFromPostalCode);
-
-  // 同伴者アコーディオンカード追加ボタン
-  btnAddProxy.addEventListener("click", () => {
-    addProxyAccordionCard();
-  });
 
   // 送信内容確認ボタン
   btnConfirm.addEventListener("click", handleConfirmClick);
@@ -146,7 +138,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * GAS APIよりデータ取得
+   * JSONPリクエストヘルパー (CORS回避用)
+   */
+  function fetchJSONP(url) {
+    return new Promise((resolve, reject) => {
+      const callbackName = "gasCallback_" + Math.round(1000000 * Math.random());
+      const script = document.createElement("script");
+      const separator = url.includes("?") ? "&" : "?";
+
+      window[callbackName] = (data) => {
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        resolve(data);
+      };
+
+      script.src = `${url}${separator}callback=${callbackName}`;
+      script.onerror = () => {
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        reject(new Error("JSONP Script Load Error"));
+      };
+
+      document.body.appendChild(script);
+    });
+  }
+
+  /**
+   * GAS APIよりデータ取得 (fetch & JSONPフォールバック)
    */
   async function fetchGuestData(token) {
     if (!CONFIG || !CONFIG.GAS_WEB_APP_URL || CONFIG.GAS_WEB_APP_URL.includes("YOUR_GAS_WEB_APP_URL")) {
@@ -154,36 +172,48 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const baseUrl = `${CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(token)}`;
+    let result = null;
+
+    // 1. まず標準 fetch を試行
     try {
-      const url = `${CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(token)}`;
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
+      const response = await fetch(baseUrl);
+      if (response.ok) {
+        result = await response.json();
       }
+    } catch (e) {
+      console.warn("Standard fetch failed (CORS block), trying JSONP fallback...", e);
+    }
 
-      const result = await response.json();
-
-      if (!result.success) {
-        showError(result.error || "データ取得に失敗しました。無効なトークンです。");
+    // 2. fetchでCORS等失敗した場合は JSONP でフォールバック試行
+    if (!result) {
+      try {
+        result = await fetchJSONP(baseUrl);
+      } catch (jsonpErr) {
+        console.error("JSONP fetch error:", jsonpErr);
+        showError(
+          "通信エラーが発生しました。\n" +
+          "Google Apps Scriptのデプロイ設定で「アクセスできるユーザー」が「全員 (Anyone)」になっているか、新しいバージョンでデプロイされているかご確認ください。"
+        );
         return;
       }
-
-      guestData = result.data.guest;
-      predefinedProxiesList = result.data.predefinedProxies || [];
-      const existingResponse = result.data.existingResponse;
-
-      // 取得したスプレッドシートデータでフォームを初期化
-      populateForm(guestData, predefinedProxiesList, existingResponse);
-
-      // 画面表示切り替え
-      loadingContainer.classList.add("hidden");
-      rsvpForm.classList.remove("hidden");
-
-    } catch (err) {
-      console.error("Fetch error:", err);
-      showError("サーバーとの通信中にエラーが発生いたしました。時間をおいて再度お試しください。");
     }
+
+    if (!result || !result.success) {
+      showError((result && result.error) ? result.error : "データ取得に失敗しました。無効なトークンです。");
+      return;
+    }
+
+    guestData = result.data.guest;
+    predefinedProxiesList = result.data.predefinedProxies || [];
+    const existingResponse = result.data.existingResponse;
+
+    // 取得したスプレッドシートデータでフォームを初期化
+    populateForm(guestData, predefinedProxiesList, existingResponse);
+
+    // 画面表示切り替え
+    loadingContainer.classList.add("hidden");
+    rsvpForm.classList.remove("hidden");
   }
 
   /**
@@ -211,29 +241,16 @@ document.addEventListener("DOMContentLoaded", () => {
       emailInput.value = guest.email;
     }
 
-    // 事前定義代理出席者リスト（PredefinedProxiesシートの全行）をダイナミック構築
+    // 事前定義代理出席者アコーディオンカード群の生成 (PredefinedProxiesシート)
     if (proxies && proxies.length > 0) {
       predefinedProxyContainer.innerHTML = "";
-      proxies.forEach((proxy, index) => {
-        const label = document.createElement("label");
-        label.className = "checkbox-label";
-        const proxyName = `${proxy.lastName} ${proxy.firstName}`.trim();
-        const ageLabel = proxy.ageCategory ? ` (${proxy.ageCategory})` : "";
-
-        label.innerHTML = `
-          <input type="checkbox" name="predefinedProxy" value="${escapeHtml(proxyName)}" id="proxy_${index}">
-          <span>${escapeHtml(proxyName)} 様${escapeHtml(ageLabel)}（ご出席）</span>
-        `;
-        predefinedProxyContainer.appendChild(label);
+      proxies.forEach((proxy) => {
+        renderPredefinedProxyAccordionCard(proxy);
       });
       predefinedProxyWrapper.classList.remove("hidden");
     } else {
       predefinedProxyWrapper.classList.add("hidden");
     }
-
-    // 動的同伴者リストの初期化
-    dynamicProxyList.innerHTML = "";
-    proxyCardIndex = 0;
 
     // もし過去の回答データが存在する場合、入力値を復元
     if (existingResp) {
@@ -258,47 +275,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (existingResp.allergies) allergiesInput.value = existingResp.allergies;
       if (existingResp.message) messageInput.value = existingResp.message;
 
-      // 事前定義代理出席者の復元
+      // 事前定義代理出席者の復元 (ProxyId または 名前による照合)
       if (existingResp.predefinedProxiesResponse) {
-        try {
-          const proxyAnswers = JSON.parse(existingResp.predefinedProxiesResponse);
-          if (Array.isArray(proxyAnswers)) {
-            proxyAnswers.forEach((name) => {
-              const cb = document.querySelector(`input[name="predefinedProxy"][value="${name}"]`);
-              if (cb) cb.checked = true;
-            });
-          }
-        } catch (e) {
-          if (existingResp.predefinedProxiesResponse.includes(",")) {
-            existingResp.predefinedProxiesResponse.split(",").forEach((name) => {
-              const cb = document.querySelector(`input[name="predefinedProxy"][value="${name.trim()}"]`);
-              if (cb) cb.checked = true;
-            });
-          } else {
-            const cb = document.querySelector(`input[name="predefinedProxy"][value="${existingResp.predefinedProxiesResponse.trim()}"]`);
-            if (cb) cb.checked = true;
-          }
-        }
-      }
-
-      // 追加同伴者（動的アコーディオンカード）の復元
-      if (existingResp.additionalProxies) {
-        try {
-          const parsedAddProxies = JSON.parse(existingResp.additionalProxies);
-          if (Array.isArray(parsedAddProxies)) {
-            parsedAddProxies.forEach((proxyObj) => {
-              addProxyAccordionCard(proxyObj);
-            });
-          }
-        } catch (e) {
-          // テキスト形式の場合は改行区切りで各行をフォーム化
-          const lines = existingResp.additionalProxies.split("\n");
-          lines.forEach((line) => {
-            if (line.trim()) {
-              addProxyAccordionCard({ lastName: line.trim() });
-            }
-          });
-        }
+        restorePredefinedProxiesResponse(existingResp.predefinedProxiesResponse);
       }
     } else {
       // デフォルト表示の展開
@@ -307,20 +286,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * アコーディオン形式の同伴者カードを動的追加
+   * 事前定義代理出席者の編集用アコーディオンカード描画関数
    */
-  function addProxyAccordionCard(initialData = null) {
-    proxyCardIndex++;
-    const cardNum = proxyCardIndex;
-
+  function renderPredefinedProxyAccordionCard(proxy) {
     const card = document.createElement("div");
-    card.className = "accordion-card open"; // 初期表示時は展開
+    card.className = "accordion-card open";
+    card.setAttribute("data-proxy-id", proxy.proxyId || "");
+
+    const proxyName = `${proxy.lastName || ""} ${proxy.firstName || ""}`.trim();
+    const ageCategory = proxy.ageCategory || "大人";
 
     card.innerHTML = `
       <div class="accordion-header">
         <div class="accordion-title-group">
-          <span class="accordion-title">同伴者 ${cardNum}: 未入力</span>
-          <span class="accordion-badge">タップして編集</span>
+          <input type="checkbox" class="accordion-checkbox proxy-attend-cb" id="cb_${proxy.proxyId}" checked>
+          <span class="accordion-title">${escapeHtml(proxyName)} 様（${escapeHtml(ageCategory)}）</span>
+          <span class="accordion-badge">タップして詳細を修正</span>
         </div>
         <span class="accordion-toggle-icon">▼</span>
       </div>
@@ -328,105 +309,104 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="input-row">
           <div class="form-group">
             <label class="form-label">姓 <span class="required-badge">必須</span></label>
-            <input type="text" class="proxy-last-name" placeholder="例: 山田">
+            <input type="text" class="proxy-last-name" value="${escapeHtml(proxy.lastName || "")}">
           </div>
           <div class="form-group">
             <label class="form-label">名 <span class="required-badge">必須</span></label>
-            <input type="text" class="proxy-first-name" placeholder="例: 花子">
+            <input type="text" class="proxy-first-name" value="${escapeHtml(proxy.firstName || "")}">
           </div>
         </div>
         <div class="input-row">
           <div class="form-group">
             <label class="form-label">せい（よみがな）</label>
-            <input type="text" class="proxy-kana-last" placeholder="例: やまだ">
+            <input type="text" class="proxy-kana-last" value="${escapeHtml(proxy.kanaLastName || "")}">
           </div>
           <div class="form-group">
             <label class="form-label">めい（よみがな）</label>
-            <input type="text" class="proxy-kana-first" placeholder="例: はなこ">
+            <input type="text" class="proxy-kana-first" value="${escapeHtml(proxy.kanaFirstName || "")}">
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">年齢区分</label>
           <select class="proxy-age-category">
-            <option value="大人">大人</option>
-            <option value="子供">子供（小学生以下）</option>
-            <option value="幼児">幼児（座席・食事なし）</option>
+            <option value="大人" ${ageCategory === "大人" ? "selected" : ""}>大人</option>
+            <option value="子供" ${ageCategory === "子供" ? "selected" : ""}>子供（小学生以下）</option>
+            <option value="幼児" ${ageCategory === "幼児" ? "selected" : ""}>幼児（座席・食事なし）</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">アレルギー・食事制限（任意）</label>
           <input type="text" class="proxy-allergies" placeholder="例: えびアレルギー など">
         </div>
-        <div class="accordion-actions">
-          <button type="button" class="btn-delete-proxy">この同伴者を削除</button>
-        </div>
       </div>
     `;
 
-    // DOM要素参照
+    // DOM参照
     const header = card.querySelector(".accordion-header");
+    const cb = card.querySelector(".proxy-attend-cb");
     const title = card.querySelector(".accordion-title");
     const lastNameIn = card.querySelector(".proxy-last-name");
     const firstNameIn = card.querySelector(".proxy-first-name");
-    const kanaLastIn = card.querySelector(".proxy-kana-last");
-    const kanaFirstIn = card.querySelector(".proxy-kana-first");
     const ageSelect = card.querySelector(".proxy-age-category");
-    const allergiesIn = card.querySelector(".proxy-allergies");
-    const btnDelete = card.querySelector(".btn-delete-proxy");
 
-    // タイトル更新関数
+    // ヘッダータイトル更新
     const updateTitle = () => {
       const ln = lastNameIn.value.trim();
       const fn = firstNameIn.value.trim();
       const age = ageSelect.value;
-      if (ln || fn) {
-        title.textContent = `同伴者: ${ln} ${fn} 様（${age}）`;
+      const isAttending = cb.checked;
+      const displayName = (ln || fn) ? `${ln} ${fn}` : "同伴者名未入力";
+
+      if (isAttending) {
+        title.textContent = `${displayName} 様（${age}）`;
+        card.style.opacity = "1";
       } else {
-        title.textContent = `同伴者: 未入力`;
+        title.textContent = `${displayName} 様（ご欠席）`;
+        card.style.opacity = "0.7";
       }
     };
 
-    // アコーディオン開閉トグル
+    // チェックボックスイベント
+    cb.addEventListener("change", (e) => {
+      e.stopPropagation();
+      updateTitle();
+      if (cb.checked) {
+        card.classList.add("open");
+      } else {
+        card.classList.remove("open");
+      }
+    });
+
+    cb.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+    // アコーディオン開閉
     header.addEventListener("click", () => {
       card.classList.toggle("open");
     });
 
-    // 入力変更時にリアルタイムでヘッダータイトル更新
+    // リアルタイム編集イベント
     lastNameIn.addEventListener("input", updateTitle);
     firstNameIn.addEventListener("input", updateTitle);
     ageSelect.addEventListener("change", updateTitle);
 
-    // 削除ボタン
-    btnDelete.addEventListener("click", (e) => {
-      e.stopPropagation(); // ヘッダー開閉イベントの連動を防止
-      card.remove();
-    });
-
-    // 初期データの設定
-    if (initialData) {
-      if (initialData.lastName) lastNameIn.value = initialData.lastName;
-      if (initialData.firstName) firstNameIn.value = initialData.firstName;
-      if (initialData.kanaLastName) kanaLastIn.value = initialData.kanaLastName;
-      if (initialData.kanaFirstName) kanaFirstIn.value = initialData.kanaFirstName;
-      if (initialData.ageCategory) ageSelect.value = initialData.ageCategory;
-      if (initialData.allergies) allergiesIn.value = initialData.allergies;
-
-      updateTitle();
-      card.classList.remove("open"); // 復元時は折りたたんだ状態
-    }
-
-    dynamicProxyList.appendChild(card);
-    card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    updateTitle();
+    predefinedProxyContainer.appendChild(card);
   }
 
   /**
-   * 画面上の同伴者カードからデータを抽出する関数
+   * 画面上の全事前定義代理出席者の編集データを抽出する関数
    */
-  function getDynamicProxiesData() {
-    const cards = dynamicProxyList.querySelectorAll(".accordion-card");
+  function getPredefinedProxiesData() {
+    const cards = predefinedProxyContainer.querySelectorAll(".accordion-card");
     const result = [];
 
     cards.forEach((card) => {
+      const proxyId = card.getAttribute("data-proxy-id");
+      const cb = card.querySelector(".proxy-attend-cb");
+      const isAttending = cb ? cb.checked : false;
+
       const ln = card.querySelector(".proxy-last-name").value.trim();
       const fn = card.querySelector(".proxy-first-name").value.trim();
       const kln = card.querySelector(".proxy-kana-last").value.trim();
@@ -434,20 +414,54 @@ document.addEventListener("DOMContentLoaded", () => {
       const age = card.querySelector(".proxy-age-category").value;
       const alg = card.querySelector(".proxy-allergies").value.trim();
 
-      if (ln || fn) {
-        result.push({
-          lastName: ln,
-          firstName: fn,
-          kanaLastName: kln,
-          kanaFirstName: kfn,
-          ageCategory: age,
-          allergies: alg,
-          fullName: `${ln} ${fn}`.trim()
-        });
-      }
+      result.push({
+        proxyId: proxyId,
+        attending: isAttending,
+        lastName: ln,
+        firstName: fn,
+        kanaLastName: kln,
+        kanaFirstName: kfn,
+        ageCategory: age,
+        allergies: alg,
+        fullName: `${ln} ${fn}`.trim()
+      });
     });
 
     return result;
+  }
+
+  /**
+   * 過去の事前定義代理出席者回答の復元処理
+   */
+  function restorePredefinedProxiesResponse(rawResp) {
+    try {
+      let parsed = typeof rawResp === "string" ? JSON.parse(rawResp) : rawResp;
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item) => {
+          let card = null;
+          if (item.proxyId) {
+            card = predefinedProxyContainer.querySelector(`.accordion-card[data-proxy-id="${item.proxyId}"]`);
+          }
+
+          if (card) {
+            const cb = card.querySelector(".proxy-attend-cb");
+            if (cb) cb.checked = item.attending !== false;
+
+            if (item.lastName) card.querySelector(".proxy-last-name").value = item.lastName;
+            if (item.firstName) card.querySelector(".proxy-first-name").value = item.firstName;
+            if (item.kanaLastName) card.querySelector(".proxy-kana-last").value = item.kanaLastName;
+            if (item.kanaFirstName) card.querySelector(".proxy-kana-first").value = item.kanaFirstName;
+            if (item.ageCategory) card.querySelector(".proxy-age-category").value = item.ageCategory;
+            if (item.allergies) card.querySelector(".proxy-allergies").value = item.allergies;
+
+            // タイトル更新発火
+            card.querySelector(".proxy-last-name").dispatchEvent(new Event("input"));
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Could not parse predefinedProxiesResponse for restoration:", e);
+    }
   }
 
   /**
@@ -546,17 +560,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // 追加された同伴者カードの入力チェック
-      const cards = dynamicProxyList.querySelectorAll(".accordion-card");
+      // 出席フラグがオンの代理出席者カードの入力チェック
+      const cards = predefinedProxyContainer.querySelectorAll(".accordion-card");
       for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
-        const ln = card.querySelector(".proxy-last-name").value.trim();
-        const fn = card.querySelector(".proxy-first-name").value.trim();
-        if (!ln || !fn) {
-          alert(`追加された同伴者様の「お名前（姓・名）」をご入力ください。`);
-          card.classList.add("open");
-          card.querySelector(".proxy-last-name").focus();
-          return;
+        const cb = card.querySelector(".proxy-attend-cb");
+        if (cb && cb.checked) {
+          const ln = card.querySelector(".proxy-last-name").value.trim();
+          const fn = card.querySelector(".proxy-first-name").value.trim();
+          if (!ln || !fn) {
+            alert(`ご出席される同伴者様のお名前（姓・名）をご入力ください。`);
+            card.classList.add("open");
+            card.querySelector(".proxy-last-name").focus();
+            return;
+          }
         }
       }
     }
@@ -613,31 +630,21 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
       }
 
-      // 事前定義代理出席者のチェック状態
-      const checkedProxies = Array.from(document.querySelectorAll('input[name="predefinedProxy"]:checked'))
-        .map(cb => cb.value);
-
-      if (checkedProxies.length > 0) {
-        html += `
-          <div class="summary-item">
-            <span class="summary-label">同伴者（選択）</span>
-            <span class="summary-value">${escapeHtml(checkedProxies.join("、"))}</span>
-          </div>
-        `;
-      }
-
-      // 画面上から動的追加された同伴者
-      const dynamicProxies = getDynamicProxiesData();
-      if (dynamicProxies.length > 0) {
-        const proxySummaryText = dynamicProxies.map(p => {
-          let str = `${p.fullName} 様（${p.ageCategory}）`;
-          if (p.allergies) str += ` [アレルギー: ${p.allergies}]`;
+      // 事前定義代理出席者の編集後状態
+      const proxiesData = getPredefinedProxiesData();
+      if (proxiesData.length > 0) {
+        const proxySummaryText = proxiesData.map(p => {
+          if (!p.attending) {
+            return `<span style="color:#888;">${escapeHtml(p.fullName)} 様（ご欠席）</span>`;
+          }
+          let str = `${escapeHtml(p.fullName)} 様（${escapeHtml(p.ageCategory)}）`;
+          if (p.allergies) str += ` [アレルギー: ${escapeHtml(p.allergies)}]`;
           return str;
         }).join("<br>");
 
         html += `
           <div class="summary-item">
-            <span class="summary-label">追加同伴者</span>
+            <span class="summary-label">同伴者様</span>
             <span class="summary-value">${proxySummaryText}</span>
           </div>
         `;
@@ -666,12 +673,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const selectedAttendance = document.querySelector('input[name="attendance"]:checked').value;
     const selectedSide = document.querySelector('input[name="side"]:checked');
 
-    // 事前定義代理出席者の選択リスト
-    const checkedProxies = Array.from(document.querySelectorAll('input[name="predefinedProxy"]:checked'))
-      .map(cb => cb.value);
-
-    // 動的追加された同伴者リスト
-    const dynamicProxies = getDynamicProxiesData();
+    // 事前定義代理出席者の編集後データのリスト (ProxyId付き)
+    const proxiesData = getPredefinedProxiesData();
 
     const payload = {
       token: currentToken,
@@ -688,8 +691,8 @@ document.addEventListener("DOMContentLoaded", () => {
       building: buildingInput.value.trim(),
       phone: phoneInput.value.trim(),
       allergies: allergiesInput.value.trim(),
-      predefinedProxiesResponse: checkedProxies,
-      additionalProxies: JSON.stringify(dynamicProxies),
+      predefinedProxiesResponse: proxiesData,
+      additionalProxies: "",
       message: messageInput.value.trim()
     };
 
@@ -731,7 +734,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function showError(msg) {
     loadingContainer.classList.add("hidden");
     rsvpForm.classList.add("hidden");
-    errorMessageText.textContent = msg;
+    errorMessageText.innerHTML = msg.replace(/\n/g, "<br>");
     errorCard.classList.remove("hidden");
   }
 

@@ -403,13 +403,13 @@ textarea {
 }
 
 /* --------------------------------------------------------------------------
-   アコーディオン式 動的同伴者追加カード
+   アコーディオン式 代理出席者（同伴者）編集カード
    -------------------------------------------------------------------------- */
 .accordion-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 15px;
+  margin-top: 10px;
   margin-bottom: 15px;
 }
 
@@ -444,7 +444,14 @@ textarea {
 .accordion-title-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.accordion-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary-color);
+  cursor: pointer;
 }
 
 .accordion-title {
