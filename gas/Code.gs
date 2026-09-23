@@ -133,7 +133,7 @@ function testSendEmail() {
           sendto = inputEmail;
         }
       } else {
-        return;
+        return; // キャンセルされた場合
       }
     } catch (e3) {
       // UIが利用できない環境
@@ -202,6 +202,17 @@ function getSheetByNameLoose(ss, name) {
   return null;
 }
 
+/**
+ * ⚡ 高速読み込み用ヘルパー: 空白行を除外し、有効データ行のみを取得する
+ */
+function getActiveSheetValues(sheet) {
+  if (!sheet) return [];
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 1 || lastCol < 1) return [];
+  return sheet.getRange(1, 1, lastRow, lastCol).getValues();
+}
+
 // ==========================================================================
 // Web API (doGet / doPost) 処理
 // ==========================================================================
@@ -228,7 +239,7 @@ function doGet(e) {
     }
 
     var tokenMap = getHeaderColumnMap(tokenSheet);
-    var tokenData = tokenSheet.getDataRange().getValues();
+    var tokenData = getActiveSheetValues(tokenSheet);
     var guestInfo = null;
 
     var colToken = (tokenMap['token'] || 1) - 1;
@@ -278,7 +289,7 @@ function doGet(e) {
 
     if (proxySheet) {
       var proxyMap = getHeaderColumnMap(proxySheet);
-      var proxyData = proxySheet.getDataRange().getValues();
+      var proxyData = getActiveSheetValues(proxySheet);
 
       var pColProxyId = (proxyMap['proxyid'] || 1) - 1;
       var pColToken = (proxyMap['token'] || 2) - 1;
@@ -328,7 +339,7 @@ function doGet(e) {
     var existingResponse = null;
 
     if (responseSheet) {
-      var respData = responseSheet.getDataRange().getValues();
+      var respData = getActiveSheetValues(responseSheet);
       for (var j = respData.length - 1; j >= 1; j--) {
         var rRow = respData[j];
         if (rRow[1] && rRow[1].toString().trim() === token.trim()) {
@@ -433,7 +444,7 @@ function doPost(e) {
 
     // トークンの有効性確認 & Tokensシートの直接更新
     var tokenMap = getHeaderColumnMap(tokenSheet);
-    var tokenData = tokenSheet.getDataRange().getValues();
+    var tokenData = getActiveSheetValues(tokenSheet);
     var colToken = (tokenMap['token'] || 1) - 1;
     var tokenRowIndex = -1;
 
@@ -520,7 +531,7 @@ function doPost(e) {
     // スプレッドシートへの書込み内容を確定
     SpreadsheetApp.flush();
 
-    // 📧 回答受付完了の自動確認メール送信！（エラーがあっても例外で詰まらないように保護）
+    // 📧 回答受付完了の自動確認メール送信！
     var emailResult = 'Not attempted';
     try {
       emailResult = sendConfirmationEmail(payload);
@@ -598,6 +609,7 @@ function sendConfirmationEmail(payload) {
     '皆様にお会いできますことを、心より楽しみにしております。\n\n' +
     groomName + ' & ' + brideName;
 
+  // ご指示の通り MailApp.sendEmail(sendto, title, body) を直接使用
   try {
     MailApp.sendEmail(sendto, title, body);
     Logger.log('MailApp.sendEmail success: ' + sendto);
@@ -634,7 +646,7 @@ function updatePredefinedProxiesSheet(ss, token, proxiesResponse, mainPayload) {
   if (!Array.isArray(proxiesList)) return;
 
   var proxyMap = getHeaderColumnMap(proxySheet);
-  var proxyData = proxySheet.getDataRange().getValues();
+  var proxyData = getActiveSheetValues(proxySheet);
 
   var colProxyId = (proxyMap['proxyid'] || 1) - 1;
   var colToken = (proxyMap['token'] || 2) - 1;

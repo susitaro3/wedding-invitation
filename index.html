@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>結婚式のご案内 - Wedding Invitation</title>
 
+  <!-- 高速表示用プレロード -->
+  <link rel="preload" as="image" href="images/FJI_6409.jpg">
+
   <!-- Webフォント（Shippori Mincho & Noto Sans JP） -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@400;500;700&display=swap" rel="stylesheet">
@@ -25,13 +29,13 @@
       <div class="hero-photo-frame">
         <div class="hero-slider" id="heroSlider">
           <div class="hero-slide active">
-            <img src="images/FJI_6409.jpg" alt="結婚式フォト 1">
+            <img src="images/FJI_6409.jpg" alt="結婚式フォト 1" loading="eager" fetchpriority="high">
           </div>
           <div class="hero-slide">
-            <img src="images/FJI_6424.jpg" alt="結婚式フォト 2">
+            <img src="images/FJI_6424.jpg" alt="結婚式フォト 2" loading="lazy">
           </div>
           <div class="hero-slide">
-            <img src="images/FJI_6456.jpg" alt="結婚式フォト 3">
+            <img src="images/FJI_6456.jpg" alt="結婚式フォト 3" loading="lazy">
           </div>
         </div>
         <div class="slider-dots" id="sliderDots">
