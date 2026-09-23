@@ -302,13 +302,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /**
    * 事前定義代理出席者の編集用アコーディオンカード描画関数
+   * (要件に従い、初期表示は閉じた状態＝"accordion-card" とします)
    */
   function renderPredefinedProxyAccordionCard(proxy) {
     const isInitiallyAttending = proxy.status !== "欠席";
     const isSameAddress = proxy.sameAddress !== false; // 初期値: 主出席者と同じ住所 (true)
 
     const card = document.createElement("div");
-    card.className = isInitiallyAttending ? "accordion-card open" : "accordion-card";
+    // 初期表示は折りたたまれた状態にする（"open" クラスをつけない）
+    card.className = "accordion-card";
     card.setAttribute("data-proxy-id", proxy.proxyId || "");
 
     const proxyName = `${proxy.lastName || ""} ${proxy.firstName || ""}`.trim();
@@ -438,7 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
       e.stopPropagation();
     });
 
-    // 代理出席者個別の郵便番号住所自動検索
+    // 代理出席者個別の郵便番号住所自動検索 (CORS制限回避ヘルパー使用)
     proxyBtnSearchPostal.addEventListener("click", async () => {
       const rawZip = proxyPostalIn.value.replace(/[^\d]/g, "");
       if (rawZip.length !== 7) {
@@ -450,17 +452,10 @@ document.addEventListener("DOMContentLoaded", () => {
       proxyBtnSearchPostal.disabled = true;
 
       try {
-        const response = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zip=${rawZip}`);
-        const data = await response.json();
-
-        if (data.status === 200 && data.results && data.results.length > 0) {
-          const result = data.results[0];
-          proxyAddressIn.value = `${result.address1}${result.address2}${result.address3}`;
-        } else {
-          alert("該当する住所が見つかりませんでした。手入力をお願いいたします。");
-        }
+        const foundAddress = await lookupPostalCode(rawZip);
+        proxyAddressIn.value = foundAddress;
       } catch (err) {
-        alert("住所検索エラーが発生しました。手入力をお願いいたします。");
+        alert("該当する住所が見つかりませんでした。お手数ですが手入力をお願いいたします。");
       } finally {
         proxyBtnSearchPostal.textContent = "住所検索";
         proxyBtnSearchPostal.disabled = false;
@@ -645,7 +640,48 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 郵便番号から住所を自動検索 (zipcloud API)
+   * 郵便番号から住所を多重API (JSONP & fetch) で検索するヘルパー関数
+   */
+  async function lookupPostalCode(rawZip) {
+    // 1. zipcloud JSONP 方式 (CORS完全回避)
+    try {
+      const data = await fetchJSONP(`https://zipcloud.ibsnet.co.jp/api/search?zip=${rawZip}`);
+      if (data && data.status === 200 && data.results && data.results.length > 0) {
+        const res = data.results[0];
+        return `${res.address1}${res.address2}${res.address3}`;
+      }
+    } catch (e) {
+      console.warn("zipcloud JSONP lookup failed, trying ZipAddress API...", e);
+    }
+
+    // 2. ZipAddress API フォールバック
+    try {
+      const response = await fetch(`https://api.zipaddress.net/?zip=${rawZip}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.code === 200 && data.data && data.data.fullAddress) {
+          return data.data.fullAddress;
+        }
+      }
+    } catch (e2) {
+      console.warn("ZipAddress API fetch failed, trying ZipAddress JSONP...", e2);
+    }
+
+    // 3. ZipAddress JSONP フォールバック
+    try {
+      const data2 = await fetchJSONP(`https://api.zipaddress.net/?zip=${rawZip}`);
+      if (data2 && data2.code === 200 && data2.data && data2.data.fullAddress) {
+        return data2.data.fullAddress;
+      }
+    } catch (e3) {
+      console.error("All postal code APIs failed:", e3);
+    }
+
+    throw new Error("Address not found");
+  }
+
+  /**
+   * 郵便番号から住所を自動検索 (主出席者用)
    */
   async function searchAddressFromPostalCode() {
     const rawZip = postalCodeInput.value.replace(/[^\d]/g, "");
@@ -658,23 +694,15 @@ document.addEventListener("DOMContentLoaded", () => {
     btnSearchPostal.disabled = true;
 
     try {
-      const response = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zip=${rawZip}`);
-      const data = await response.json();
+      const foundAddress = await lookupPostalCode(rawZip);
+      addressInput.value = foundAddress;
+      buildingInput.focus();
 
-      if (data.status === 200 && data.results && data.results.length > 0) {
-        const result = data.results[0];
-        const fullAddress = `${result.address1}${result.address2}${result.address3}`;
-        addressInput.value = fullAddress;
-        buildingInput.focus();
-
-        // 連動している代理出席者住所を同期
-        syncAddressesToSameAddressProxies();
-      } else {
-        alert("該当する住所が見つかりませんでした。お手数ですが手入力をお願いいたします。");
-      }
+      // 連動している代理出席者住所を同期
+      syncAddressesToSameAddressProxies();
     } catch (e) {
       console.error("Postal search error:", e);
-      alert("住所検索中にエラーが発生しました。手入力をお願いいたします。");
+      alert("該当する住所が見つかりませんでした。お手数ですが手入力をお願いいたします。");
     } finally {
       btnSearchPostal.textContent = "住所自動入力";
       btnSearchPostal.disabled = false;
