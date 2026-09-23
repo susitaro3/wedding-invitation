@@ -289,8 +289,9 @@ document.addEventListener("DOMContentLoaded", () => {
    * 事前定義代理出席者の編集用アコーディオンカード描画関数
    */
   function renderPredefinedProxyAccordionCard(proxy) {
+    const isInitiallyAttending = proxy.status !== "欠席";
     const card = document.createElement("div");
-    card.className = "accordion-card open";
+    card.className = isInitiallyAttending ? "accordion-card open" : "accordion-card";
     card.setAttribute("data-proxy-id", proxy.proxyId || "");
 
     const proxyName = `${proxy.lastName || ""} ${proxy.firstName || ""}`.trim();
@@ -299,7 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
     card.innerHTML = `
       <div class="accordion-header">
         <div class="accordion-title-group">
-          <input type="checkbox" class="accordion-checkbox proxy-attend-cb" id="cb_${proxy.proxyId}" checked>
+          <input type="checkbox" class="accordion-checkbox proxy-attend-cb" id="cb_${proxy.proxyId}" ${isInitiallyAttending ? "checked" : ""}>
           <span class="accordion-title">${escapeHtml(proxyName)} 様（${escapeHtml(ageCategory)}）</span>
           <span class="accordion-badge">タップして詳細を修正</span>
         </div>
@@ -336,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="form-group">
           <label class="form-label">アレルギー・食事制限（任意）</label>
-          <input type="text" class="proxy-allergies" placeholder="例: えびアレルギー など">
+          <input type="text" class="proxy-allergies" value="${escapeHtml(proxy.allergies || "")}" placeholder="例: えびアレルギー など">
         </div>
       </div>
     `;
