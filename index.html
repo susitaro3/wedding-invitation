@@ -18,17 +18,34 @@
 </head>
 <body>
 
-  <!-- 全画面オープニング アニメーション -->
+  <!-- 全画面オープニング アニメーション (封筒演出) -->
   <div id="openingOverlay" class="opening-overlay">
-    <div class="opening-content">
-      <div class="opening-sub">SAVE THE DATE</div>
-      <h1 class="opening-title">Wedding Invitation</h1>
-      <div class="opening-couple" id="openingCoupleDisplay">新郎 太郎 &amp; 新婦 花子</div>
-      <div class="opening-date" id="openingDateDisplay">2026.10.10</div>
-      <button type="button" id="btnOpenInvitation" class="btn-open-invitation">
-        <span>招待状を開く</span>
-        <span class="open-arrow">▼</span>
-      </button>
+    <div class="envelope-container" id="envelopeContainer">
+      <div class="envelope-wrapper">
+        <!-- 封筒フラップ (フタ) -->
+        <div class="envelope-flap" id="envelopeFlap">
+          <!-- シーリングワックス (封かん) -->
+          <div class="wax-seal">✦</div>
+        </div>
+
+        <!-- 封筒内部の招待状カード -->
+        <div class="envelope-letter" id="envelopeLetter">
+          <div class="opening-sub">SAVE THE DATE</div>
+          <h1 class="opening-title">Wedding Invitation</h1>
+          <div class="opening-couple" id="openingCoupleDisplay">新郎 太郎 &amp; 新婦 花子</div>
+          <div class="opening-date" id="openingDateDisplay">2026.10.10</div>
+        </div>
+
+        <!-- 封筒本体ポケット -->
+        <div class="envelope-pocket"></div>
+      </div>
+
+      <!-- 開封ボタン (ボタンを押さないと遷移しません) -->
+      <div class="opening-action-wrapper">
+        <button type="button" id="btnOpenInvitation" class="btn-open-envelope">
+          <span>✉️ 招待状を開く</span>
+        </button>
+      </div>
     </div>
   </div>
 

@@ -96,34 +96,31 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================================================
 
   /**
-   * 全画面オープニングアニメーション（スプラッシュ表示＆自動/タップ進行）
+   * 全画面オープニング アニメーション (封筒開封演出・ボタンクリック必須)
    */
   function initOpeningOverlay() {
     const overlay = document.getElementById("openingOverlay");
+    const container = document.getElementById("envelopeContainer");
     const btnOpen = document.getElementById("btnOpenInvitation");
-    if (!overlay) return;
+    if (!overlay || !container || !btnOpen) return;
 
-    function closeOverlay() {
-      overlay.classList.add("closed");
+    let isOpening = false;
+
+    function openEnvelope() {
+      if (isOpening) return;
+      isOpening = true;
+
+      // 1. 3D封筒のフタが開き、中の招待状カードが飛び出す
+      container.classList.add("open");
+
+      // 2. 開封アニメーション演出完了後 (1.5秒後)、全体をフェードアウトしてメイン画面を表示
+      setTimeout(() => {
+        overlay.classList.add("closed");
+      }, 1500);
     }
 
-    if (btnOpen) {
-      btnOpen.addEventListener("click", closeOverlay);
-    }
-
-    // 画面タップでも開く
-    overlay.addEventListener("click", (e) => {
-      if (e.target.tagName !== "BUTTON" && !e.target.closest("button")) {
-        closeOverlay();
-      }
-    });
-
-    // 3.8秒後に優しく自動開閉
-    setTimeout(() => {
-      if (!overlay.classList.contains("closed")) {
-        closeOverlay();
-      }
-    }, 3800);
+    // ★ ボタン押下必須（自動タイマー・画面背景タップでの勝手な遷移は行いません）
+    btnOpen.addEventListener("click", openEnvelope);
   }
 
   /**
