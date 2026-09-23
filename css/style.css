@@ -489,6 +489,37 @@ textarea {
   display: block;
 }
 
+.proxy-address-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.proxy-address-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+}
+
+.proxy-address-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-color);
+}
+
+.proxy-custom-address-box {
+  background-color: #fcfbf8;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-top: 10px;
+}
+
 .accordion-actions {
   display: flex;
   justify-content: flex-end;

@@ -3,10 +3,10 @@
  *
  * 【スプレッドシートの構造】
  * 1. シート名: "Tokens" （招待主ゲストデータ）
- *    列構成: A:Token, B:LastName, C:FirstName, D:KanaLastName, E:KanaFirstName, F:Side, G:AgeCategory, H:Email, I:Status
+ *    列構成: A:Token, B:LastName, C:FirstName, D:KanaLastName, E:KanaFirstName, F:Side, G:AgeCategory, H:Email, I:Status, J:PostalCode, K:Address, L:Building, M:Phone
  *
- * 2. シート名: "PredefinedProxies" （事前定義代理出席者テーブル - フォーム入力で直接更新されます）
- *    列構成: A:ProxyId, B:Token, C:LastName, D:FirstName, E:KanaLastName, F:KanaFirstName, G:Side, H:AgeCategory, I:Email, J:Status, K:Allergies
+ * 2. シート名: "PredefinedProxies" （事前定義代理出席者テーブル）
+ *    列構成: A:ProxyId, B:Token, C:LastName, D:FirstName, E:KanaLastName, F:KanaFirstName, G:Side, H:AgeCategory, I:Email, J:Status, K:Allergies, L:SameAddress, M:PostalCode, N:Address, O:Building, P:Phone
  *
  * 3. シート名: "Responses" （回答履歴データ保存用）
  *    列構成: A:Timestamp, B:Token, C:Attendance, D:LastName, E:FirstName, F:KanaLastName, G:KanaFirstName, H:Side, I:AgeCategory, J:Email, K:PostalCode, L:Address, M:Building, N:Phone, O:Allergies, P:PredefinedProxiesResponse, Q:AdditionalProxies, R:Message
@@ -27,7 +27,8 @@ function createWeddingSheets() {
   }
   var tokensHeaders = [
     'Token', 'LastName', 'FirstName', 'KanaLastName', 'KanaFirstName',
-    'Side', 'AgeCategory', 'Email', 'Status'
+    'Side', 'AgeCategory', 'Email', 'Status',
+    'PostalCode', 'Address', 'Building', 'Phone'
   ];
   tokensSheet.appendRow(tokensHeaders);
   formatHeaderRow(tokensSheet, tokensHeaders.length, '#3a506b');
@@ -35,14 +36,16 @@ function createWeddingSheets() {
   // サンプル主ゲストデータ
   tokensSheet.appendRow([
     'sample-guest-01', '山田', '太郎', 'やまだ', 'たろう',
-    '新郎側', '大人', 'yamada@example.com', '未回答'
+    '新郎側', '大人', 'yamada@example.com', '未回答',
+    '', '', '', ''
   ]);
   tokensSheet.appendRow([
     'sample-guest-02', '佐藤', '花子', 'さとう', 'はなこ',
-    '新婦側', '大人', 'sato@example.com', '未回答'
+    '新婦側', '大人', 'sato@example.com', '未回答',
+    '', '', '', ''
   ]);
 
-  // 2. PredefinedProxies シートの生成・初期化 (Status, Allergiesを追加)
+  // 2. PredefinedProxies シートの生成・初期化 (SameAddress, PostalCode, Address, Building, Phoneを追加)
   var proxySheet = ss.getSheetByName('PredefinedProxies');
   if (!proxySheet) {
     proxySheet = ss.insertSheet('PredefinedProxies');
@@ -51,7 +54,8 @@ function createWeddingSheets() {
   }
   var proxyHeaders = [
     'ProxyId', 'Token', 'LastName', 'FirstName', 'KanaLastName', 'KanaFirstName',
-    'Side', 'AgeCategory', 'Email', 'Status', 'Allergies'
+    'Side', 'AgeCategory', 'Email', 'Status', 'Allergies',
+    'SameAddress', 'PostalCode', 'Address', 'Building', 'Phone'
   ];
   proxySheet.appendRow(proxyHeaders);
   formatHeaderRow(proxySheet, proxyHeaders.length, '#5bc0be');
@@ -59,11 +63,13 @@ function createWeddingSheets() {
   // サンプル事前定義代理出席者データ
   proxySheet.appendRow([
     'proxy-sample-01', 'sample-guest-01', '山田', '花子', 'やまだ', 'はなこ',
-    '新郎側', '大人', 'hanako@example.com', '未回答', ''
+    '新郎側', '大人', 'hanako@example.com', '未回答', '',
+    'はい', '', '', '', ''
   ]);
   proxySheet.appendRow([
     'proxy-sample-02', 'sample-guest-01', '山田', '一郎', 'やまだ', 'いちろう',
-    '新郎側', '子供', '', '未回答', ''
+    '新郎側', '子供', '', '未回答', '',
+    'はい', '', '', '', ''
   ]);
 
   // 3. Responses シートの生成・初期化
@@ -142,7 +148,11 @@ function doGet(e) {
           side: row[5] ? row[5].toString() : '新郎側',
           ageCategory: row[6] ? row[6].toString() : '大人',
           email: row[7] ? row[7].toString() : '',
-          status: row[8] ? row[8].toString() : '未回答'
+          status: row[8] ? row[8].toString() : '未回答',
+          postalCode: row[9] ? row[9].toString() : '',
+          address: row[10] ? row[10].toString() : '',
+          building: row[11] ? row[11].toString() : '',
+          phone: row[12] ? row[12].toString() : ''
         };
         break;
       }
@@ -173,6 +183,11 @@ function doGet(e) {
             email: pRow[8] ? pRow[8].toString() : '',
             status: pRow[9] ? pRow[9].toString() : '未回答',
             allergies: pRow[10] ? pRow[10].toString() : '',
+            sameAddress: (pRow[11] ? pRow[11].toString() : 'はい') !== 'いいえ',
+            postalCode: pRow[12] ? pRow[12].toString() : '',
+            address: pRow[13] ? pRow[13].toString() : '',
+            building: pRow[14] ? pRow[14].toString() : '',
+            phone: pRow[15] ? pRow[15].toString() : '',
             fullName: (pRow[2] ? pRow[2].toString() : '') + ' ' + (pRow[3] ? pRow[3].toString() : '')
           });
         }
@@ -248,7 +263,7 @@ function doPost(e) {
       return responseJSON({ success: false, error: '必要なシート（TokensまたはResponses）が見つかりません。' });
     }
 
-    // トークンの有効性確認 & Status更新
+    // トークンの有効性確認 & Tokensシートの直接更新
     var tokenData = tokenSheet.getDataRange().getValues();
     var tokenRowIndex = -1;
 
@@ -263,7 +278,7 @@ function doPost(e) {
       return responseJSON({ success: false, error: '無効なトークンです。' });
     }
 
-    // Responsesシートに保存する行の構築
+    // 送信パラメーター
     var timestamp = new Date();
     var attendance = payload.attendance || '';
     var lastName = payload.lastName || '';
@@ -282,7 +297,7 @@ function doPost(e) {
     var additionalProxies = formatAdditionalProxies(payload.additionalProxies);
     var message = payload.message || '';
 
-    // Responses シートへの追加
+    // Responses シート（履歴）への追加
     responseSheet.appendRow([
       timestamp,
       token,
@@ -304,11 +319,22 @@ function doPost(e) {
       message
     ]);
 
-    // Tokens シートの Status (I列: 9番目の列) を更新
+    // 🚀 Tokens シート（主ゲストマスター）の直接更新
+    if (lastName) tokenSheet.getRange(tokenRowIndex, 2).setValue(lastName);
+    if (firstName) tokenSheet.getRange(tokenRowIndex, 3).setValue(firstName);
+    if (kanaLastName) tokenSheet.getRange(tokenRowIndex, 4).setValue(kanaLastName);
+    if (kanaFirstName) tokenSheet.getRange(tokenRowIndex, 5).setValue(kanaFirstName);
+    if (side) tokenSheet.getRange(tokenRowIndex, 6).setValue(side);
+    if (ageCategory) tokenSheet.getRange(tokenRowIndex, 7).setValue(ageCategory);
+    if (email) tokenSheet.getRange(tokenRowIndex, 8).setValue(email);
     tokenSheet.getRange(tokenRowIndex, 9).setValue(attendance);
+    tokenSheet.getRange(tokenRowIndex, 10).setValue(postalCode);
+    tokenSheet.getRange(tokenRowIndex, 11).setValue(address);
+    tokenSheet.getRange(tokenRowIndex, 12).setValue(building);
+    tokenSheet.getRange(tokenRowIndex, 13).setValue(phone);
 
-    // 🚀 PredefinedProxies シート（マスターデータ）の該当行をダイレクト更新！
-    updatePredefinedProxiesSheet(ss, token, payload.predefinedProxiesResponse);
+    // 🚀 PredefinedProxies シート（同伴者マスター）の該当行を直接更新！
+    updatePredefinedProxiesSheet(ss, token, payload.predefinedProxiesResponse, payload);
 
     return responseJSON({
       success: true,
@@ -323,7 +349,7 @@ function doPost(e) {
 /**
  * 🚀 PredefinedProxies シートの該当行をユーザー入力内容でダイレクト更新する関数
  */
-function updatePredefinedProxiesSheet(ss, token, proxiesResponse) {
+function updatePredefinedProxiesSheet(ss, token, proxiesResponse, mainPayload) {
   if (!proxiesResponse) return;
 
   var proxySheet = ss.getSheetByName('PredefinedProxies');
@@ -355,7 +381,7 @@ function updatePredefinedProxiesSheet(ss, token, proxiesResponse) {
       if (rowProxyId === targetProxyId) {
         var rowNum = p + 1; // 1-indexed
 
-        // C列: LastName, D列: FirstName, E列: KanaLastName, F列: KanaFirstName, H列: AgeCategory, J列: Status, K列: Allergies
+        // C:LastName, D:FirstName, E:KanaLastName, F:KanaFirstName, H:AgeCategory, J:Status, K:Allergies
         if (item.lastName !== undefined) proxySheet.getRange(rowNum, 3).setValue(item.lastName);
         if (item.firstName !== undefined) proxySheet.getRange(rowNum, 4).setValue(item.firstName);
         if (item.kanaLastName !== undefined) proxySheet.getRange(rowNum, 5).setValue(item.kanaLastName);
@@ -363,6 +389,28 @@ function updatePredefinedProxiesSheet(ss, token, proxiesResponse) {
         if (item.ageCategory !== undefined) proxySheet.getRange(rowNum, 8).setValue(item.ageCategory);
         proxySheet.getRange(rowNum, 10).setValue(item.attending ? '出席' : '欠席');
         if (item.allergies !== undefined) proxySheet.getRange(rowNum, 11).setValue(item.allergies);
+
+        // L:SameAddress ('はい' / 'いいえ')
+        var isSame = item.sameAddress !== false;
+        proxySheet.getRange(rowNum, 12).setValue(isSame ? 'はい' : 'いいえ');
+
+        // M:PostalCode, N:Address, O:Building, P:Phone
+        if (isSame) {
+          // 主出席者と同じ住所
+          if (mainPayload) {
+            proxySheet.getRange(rowNum, 13).setValue(mainPayload.postalCode || '');
+            proxySheet.getRange(rowNum, 14).setValue(mainPayload.address || '');
+            proxySheet.getRange(rowNum, 15).setValue(mainPayload.building || '');
+            proxySheet.getRange(rowNum, 16).setValue(mainPayload.phone || '');
+          }
+        } else {
+          // 個別住所
+          if (item.postalCode !== undefined) proxySheet.getRange(rowNum, 13).setValue(item.postalCode);
+          if (item.address !== undefined) proxySheet.getRange(rowNum, 14).setValue(item.address);
+          if (item.building !== undefined) proxySheet.getRange(rowNum, 15).setValue(item.building);
+          if (item.phone !== undefined) proxySheet.getRange(rowNum, 16).setValue(item.phone);
+        }
+
         break;
       }
     }
@@ -392,6 +440,7 @@ function formatPredefinedProxiesResponse(proxiesRaw) {
       var details = [status, p.ageCategory || '大人'];
       if (kana.trim().length > 0) details.push('ふりがな: ' + kana.trim());
       if (p.allergies) details.push('アレルギー: ' + p.allergies);
+      if (p.sameAddress !== undefined) details.push(p.sameAddress ? '住所: 同一' : '住所: 個別');
       if (p.proxyId) details.push('ID: ' + p.proxyId);
       return name.trim() + ' (' + details.join(', ') + ')';
     }).join('\n');

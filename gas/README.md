@@ -14,71 +14,59 @@
 3. `Code.gs` の内容を消去し、プロジェクトの `gas/Code.gs` をすべて貼り付けて保存します。
 4. エディタ上部の**関数選択ドロップダウン**（`doGet` や `doPost` と並んでいる部分）で **`createWeddingSheets`** を選択し、**「実行」** ボタンを押します。
 5. アクセス許可ポップアップが表示された場合は承認してください。
-6. 一瞬で **`Tokens`**、**`PredefinedProxies`**（ProxyId、Status、Allergies列付き）、**`Responses`** の3つのシートが背景色付き・ヘッダー固定・サンプルデータ入りで自動構築されます！
+6. 一瞬で **`Tokens`**（住所列付き）、**`PredefinedProxies`**（SameAddress/住所列付き）、**`Responses`** の3つのシートが背景色付き・ヘッダー固定・サンプルデータ入りで自動構築されます！
 
 ---
 
 ## 1. 手動で作成する場合のテーブル構成 (3シート構成)
 
-### ① `Tokens` シート（招待主ゲスト管理）
-トークンを発行する主ゲスト（本招待客）情報を管理します。
+### ① `Tokens` シート（招待主ゲストマスター）
+トークンを発行する主ゲスト（本招待客）の基本情報および最新住所を保持します。
 
 | 列 | ヘッダー名 | 説明 | 例 |
 |---|---|---|---|
 | A | `Token` | 一意のトークン文字列 | `sample-guest-001` |
-| B | `LastName` | 姓 | `山田` |
-| C | `FirstName` | 名 | `太郎` |
-| D | `KanaLastName` | せい (よみがな) | `やまだ` |
-| E | `KanaFirstName` | めい (よみがな) | `たろう` |
+| B | `LastName` | 姓（ユーザー送信で更新） | `山田` |
+| C | `FirstName` | 名（ユーザー送信で更新） | `太郎` |
+| D | `KanaLastName` | せい (ユーザー送信で更新) | `やまだ` |
+| E | `KanaFirstName` | めい (ユーザー送信で更新) | `たろう` |
 | F | `Side` | 新郎側 / 新婦側 | `新郎側` |
-| G | `AgeCategory` | 年齢区分 | `大人` （または `子供`, `幼児`） |
-| H | `Email` | メールアドレス (任意) | `taro@example.com` |
-| I | `Status` | 回答状況 (自動更新されます) | `未回答` / `出席` / `欠席` |
+| G | `AgeCategory` | 年齢区分 | `大人` |
+| H | `Email` | メールアドレス | `taro@example.com` |
+| I | `Status` | 回答状況 (自動更新) | `出席` / `欠席` |
+| J | `PostalCode` | 郵便番号（ユーザー送信で更新）【NEW!】 | `1000001` |
+| K | `Address` | 住所（ユーザー送信で更新）【NEW!】 | `東京都千代田区1-1-1` |
+| L | `Building` | 建物名・部屋番号（ユーザー送信で更新）【NEW!】 | `千代田ビル 101` |
+| M | `Phone` | 電話番号（ユーザー送信で更新）【NEW!】 | `09012345678` |
 
 ---
 
-### ② `PredefinedProxies` シート（事前定義代理出席者・ご家族管理）
-管理者側で事前にトークンに紐づけて定義する代理出席者・同伴者の専用テーブルです。フォームからの入力・修整によって**リアルタイムでダイレクト更新**されます。
+### ② `PredefinedProxies` シート（事前定義代理出席者マスター）
+代理出席者・同伴者の専用テーブルです。フォームからの最新回答・住所更新がダイレクト反映されます。
 
 | 列 | ヘッダー名 | 説明 | 例 |
 |---|---|---|---|
 | A | `ProxyId` | 代理出席者管理キー | `proxy-sample-01` |
 | B | `Token` | 紐づけるTokensシートのToken | `sample-guest-01` |
-| C | `LastName` | 姓（ユーザー送信で更新されます） | `山田` |
-| D | `FirstName` | 名（ユーザー送信で更新されます） | `花子` |
-| E | `KanaLastName` | せい (ユーザー送信で更新されます) | `やまだ` |
-| F | `KanaFirstName` | めい (ユーザー送信で更新されます) | `はなこ` |
+| C | `LastName` | 姓 | `山田` |
+| D | `FirstName` | 名 | `花子` |
+| E | `KanaLastName` | せい | `やまだ` |
+| F | `KanaFirstName` | めい | `はなこ` |
 | G | `Side` | 新郎側 / 新婦側 | `新郎側` |
-| H | `AgeCategory` | 年齢区分（ユーザー送信で更新されます） | `大人` |
+| H | `AgeCategory` | 年齢区分 | `大人` |
 | I | `Email` | メールアドレス (任意) | `hanako@example.com` |
-| J | `Status` | 回答状況（ユーザー送信で更新されます）【NEW!】 | `出席` / `欠席` |
-| K | `Allergies` | アレルギー（ユーザー送信で更新されます）【NEW!】 | `えびアレルギー` |
+| J | `Status` | 回答状況 | `出席` / `欠席` |
+| K | `Allergies` | アレルギー | `えびアレルギー` |
+| L | `SameAddress` | 主出席者と同じ住所【NEW!】 | `はい` / `いいえ` |
+| M | `PostalCode` | 郵便番号【NEW!】 | `1000001` |
+| N | `Address` | 住所【NEW!】 | `東京都千代田区1-1-1` |
+| O | `Building` | 建物名・部屋番号【NEW!】 | `千代田ビル 101` |
+| P | `Phone` | 電話番号 (任意)【NEW!】 | `09087654321` |
 
 ---
 
-### ③ `Responses` シート（回答保存用）
-フォームからの全回答履歴データが記録されます。
-
-| 列 | ヘッダー名 |
-|---|---|
-| A | `Timestamp` |
-| B | `Token` |
-| C | `Attendance` |
-| D | `LastName` |
-| E | `FirstName` |
-| F | `KanaLastName` |
-| G | `KanaFirstName` |
-| H | `Side` |
-| I | `AgeCategory` |
-| J | `Email` |
-| K | `PostalCode` |
-| L | `Address` |
-| M | `Building` |
-| N | `Phone` |
-| O | `Allergies` |
-| P | `PredefinedProxiesResponse` |
-| Q | `AdditionalProxies` |
-| R | `Message` |
+### ③ `Responses` シート（回答保存履歴用）
+フォームからの全回答履歴ログデータです。
 
 ---
 
