@@ -571,8 +571,18 @@ document.addEventListener("DOMContentLoaded", () => {
    * 過去の事前定義代理出席者回答の復元処理
    */
   function restorePredefinedProxiesResponse(rawResp) {
+    if (!rawResp) return;
     try {
-      let parsed = typeof rawResp === "string" ? JSON.parse(rawResp) : rawResp;
+      let parsed = rawResp;
+      if (typeof rawResp === "string") {
+        try {
+          parsed = JSON.parse(rawResp);
+        } catch (jsonErr) {
+          console.log("rawResp is formatted string, skipping JSON parse for proxy restoration.");
+          return;
+        }
+      }
+
       if (Array.isArray(parsed)) {
         parsed.forEach((item) => {
           let card = null;
