@@ -102,16 +102,16 @@ function createWeddingSheets() {
 }
 
 /**
- * 📧 メール送信機能のテスト・承認用関数
+ * 📧 メール送信機能のテスト・承認用関数 (MailApp.sendEmail 利用)
  *
  * 実行するとダイアログが表示され、指定された実際のメールアドレス宛てにテストメールを送信します。
  */
 function testSendEmail() {
-  var userEmail = '';
+  var sendto = '';
   try {
-    userEmail = Session.getEffectiveUser().getEmail();
+    sendto = Session.getEffectiveUser().getEmail();
   } catch (e) {
-    userEmail = '';
+    sendto = '';
   }
 
   var ui;
@@ -120,8 +120,6 @@ function testSendEmail() {
   } catch (e2) {
     ui = null;
   }
-
-  var recipientEmail = userEmail;
 
   if (ui) {
     try {
@@ -134,7 +132,7 @@ function testSendEmail() {
       if (promptResult.getSelectedButton() === ui.Button.OK) {
         var inputEmail = promptResult.getResponseText().trim();
         if (inputEmail) {
-          recipientEmail = inputEmail;
+          sendto = inputEmail;
         }
       } else {
         return; // キャンセルされた場合
@@ -144,26 +142,20 @@ function testSendEmail() {
     }
   }
 
-  if (!recipientEmail) {
-    recipientEmail = 'yamada@example.com';
+  if (!sendto) {
+    sendto = 'yamada@example.com';
   }
 
-  var subject = '【送信テスト】結婚式招待状 メール機能テスト';
+  var title = '【送信テスト】結婚式招待状 メール機能テスト';
   var body = 'これは結婚式Web招待状の自動返信メール送信機能のテストです。\nこのメールが届いていれば、GASのメール送信権限設定は正常に完了しています。';
 
   try {
-    GmailApp.sendEmail(recipientEmail, subject, body);
-    Logger.log('GmailAppテストメール送信成功: ' + recipientEmail);
-    if (ui) ui.alert('【送信成功】\n' + recipientEmail + ' 宛てにテストメールを送信いたしました。\n受信トレイ（または迷惑メールフォルダ）をご確認ください。');
-  } catch (err1) {
-    try {
-      MailApp.sendEmail(recipientEmail, subject, body);
-      Logger.log('MailAppテストメール送信成功: ' + recipientEmail);
-      if (ui) ui.alert('【送信成功】\n' + recipientEmail + ' 宛てにテストメールを送信いたしました。\n受信トレイ（または迷惑メールフォルダ）をご確認ください。');
-    } catch (err2) {
-      Logger.log('送信エラー: ' + err2.toString());
-      if (ui) ui.alert('【送信エラー】メール送信に失敗しました:\n' + err2.toString());
-    }
+    MailApp.sendEmail(sendto, title, body);
+    Logger.log('MailApp.sendEmail success: ' + sendto);
+    if (ui) ui.alert('【送信成功】\n' + sendto + ' 宛てにテストメールを送信いたしました。\n受信トレイ（または迷惑メールフォルダ）をご確認ください。');
+  } catch (err) {
+    Logger.log('送信エラー: ' + err.toString());
+    if (ui) ui.alert('【送信エラー】メール送信に失敗しました:\n' + err.toString());
   }
 }
 
@@ -218,6 +210,12 @@ function getSheetByNameLoose(ss, name) {
 
 function doGet(e) {
   var callback = e && e.parameter ? e.parameter.callback : null;
+
+  // 🚀 サーバーサイド郵便番号住所検索アクション (CORS完全回避)
+  if (e && e.parameter && e.parameter.action === 'postal') {
+    var searchZip = e.parameter.zip ? e.parameter.zip.replace(/[^\d]/g, '') : '';
+    return handlePostalCodeSearch(searchZip, callback);
+  }
 
   try {
     var token = e && e.parameter ? e.parameter.token : null;
@@ -374,6 +372,45 @@ function doGet(e) {
   }
 }
 
+/**
+ * 🚀 Googleクラウドサーバー側で実行する郵便番号住所自動検索関数 (CORSブロック100%回避)
+ */
+function handlePostalCodeSearch(zip, callback) {
+  if (!zip || zip.length !== 7) {
+    return responseJSON({ success: false, error: '郵便番号は7桁の数字で入力してください。' }, callback);
+  }
+
+  // 1. zipcloud API 検索 (サーバー間通信)
+  try {
+    var response = UrlFetchApp.fetch('https://zipcloud.ibsnet.co.jp/api/search?zip=' + zip, { muteHttpExceptions: true });
+    if (response.getResponseCode() === 200) {
+      var data = JSON.parse(response.getContentText());
+      if (data && data.status === 200 && data.results && data.results.length > 0) {
+        var res = data.results[0];
+        var fullAddr = (res.address1 || '') + (res.address2 || '') + (res.address3 || '');
+        return responseJSON({ success: true, address: fullAddr }, callback);
+      }
+    }
+  } catch (e1) {
+    Logger.log('zipcloud UrlFetchApp failed: ' + e1.toString());
+  }
+
+  // 2. ZipAddress API フォールバック (サーバー間通信)
+  try {
+    var response2 = UrlFetchApp.fetch('https://api.zipaddress.net/?zip=' + zip, { muteHttpExceptions: true });
+    if (response2.getResponseCode() === 200) {
+      var data2 = JSON.parse(response2.getContentText());
+      if (data2 && data2.code === 200 && data2.data && data2.data.fullAddress) {
+        return responseJSON({ success: true, address: data2.data.fullAddress }, callback);
+      }
+    }
+  } catch (e2) {
+    Logger.log('ZipAddress UrlFetchApp failed: ' + e2.toString());
+  }
+
+  return responseJSON({ success: false, error: '該当する住所が見つかりませんでした。' }, callback);
+}
+
 function doPost(e) {
   try {
     var contents = e.postData ? e.postData.contents : null;
@@ -478,12 +515,13 @@ function doPost(e) {
     // 🚀 PredefinedProxies シート（同伴者マスター）の該当行を動的ヘッダー列指定で直接更新！
     updatePredefinedProxiesSheet(ss, token, rawPredefinedProxiesObj, payload);
 
-    // 📧 回答受付完了の自動Gmail確認メール送信！ (GmailApp & MailApp フォールバック)
-    sendConfirmationEmail(payload);
+    // 📧 回答受付完了の自動確認メール送信！ (MailApp.sendEmail(sendto, title, body) 利用)
+    var emailResult = sendConfirmationEmail(payload);
 
     return responseJSON({
       success: true,
-      message: 'ご回答ありがとうございます。回答を送信・保存いたしました。'
+      message: 'ご回答ありがとうございます。回答を送信・保存いたしました。',
+      emailStatus: emailResult
     });
 
   } catch (err) {
@@ -492,12 +530,12 @@ function doPost(e) {
 }
 
 /**
- * 🚀 回答登録完了時の自動確認メール送信処理
+ * 🚀 回答登録完了時の自動確認メール送信処理 (MailApp.sendEmail(sendto, title, body) 利用)
  */
 function sendConfirmationEmail(payload) {
-  if (!payload || !payload.email || !payload.email.trim()) return;
+  if (!payload || !payload.email || !payload.email.trim()) return 'No recipient email specified';
 
-  var recipientEmail = payload.email.trim();
+  var sendto = payload.email.trim();
   var attendanceStatus = payload.attendance || '未回答';
   var lastName = payload.lastName || '';
   var firstName = payload.firstName || '';
@@ -510,7 +548,7 @@ function sendConfirmationEmail(payload) {
   var venueName = 'グランドホテル東京 鳳凰の間';
   var venueAddress = '東京都千代田区1-1-1';
 
-  var subject = '【ご回答完了】結婚式のご案内 - ' + groomName + ' & ' + brideName;
+  var title = '【ご回答完了】結婚式のご案内 - ' + groomName + ' & ' + brideName;
 
   var body = guestName + ' 様\n\n' +
     'このたびはWeb招待状のご回答をいただき、誠にありがとうございます。\n' +
@@ -521,7 +559,7 @@ function sendConfirmationEmail(payload) {
     '・お名前：' + guestName + '（' + (payload.kanaLastName || '') + ' ' + (payload.kanaFirstName || '') + ' 様）\n';
 
   if (attendanceStatus === '出席') {
-    body += '・メールアドレス：' + recipientEmail + '\n' +
+    body += '・メールアドレス：' + sendto + '\n' +
       '・ご住所：〒' + (payload.postalCode || '') + ' ' + (payload.address || '') + ' ' + (payload.building || '') + '\n' +
       '・お電話番号：' + (payload.phone || '') + '\n';
 
@@ -549,22 +587,24 @@ function sendConfirmationEmail(payload) {
     '皆様にお会いできますことを、心より楽しみにしております。\n\n' +
     groomName + ' & ' + brideName;
 
-  // GmailApp → MailApp 二重フォールバックで確実に送信
+  // ご指示の通り MailApp.sendEmail(sendto, title, body) を直接使用
   try {
-    GmailApp.sendEmail(recipientEmail, subject, body);
-    Logger.log('GmailApp sendEmail success: ' + recipientEmail);
-  } catch (err1) {
+    MailApp.sendEmail(sendto, title, body);
+    Logger.log('MailApp.sendEmail success: ' + sendto);
+    return 'Sent via MailApp to ' + sendto;
+  } catch (err) {
+    Logger.log('MailApp.sendEmail error: ' + err.toString());
     try {
-      MailApp.sendEmail(recipientEmail, subject, body);
-      Logger.log('MailApp sendEmail success: ' + recipientEmail);
+      GmailApp.sendEmail(sendto, title, body);
+      return 'Sent via GmailApp to ' + sendto;
     } catch (err2) {
-      Logger.log('Email error: ' + err2.toString());
+      return 'Failed: ' + err2.toString();
     }
   }
 }
 
 /**
- * 🚀 PredefinedProxies シートの該当行をユーザー入力内容でダイレクト更新する関数（動的ヘッダーマッピング対応）
+ * 🚀 PredefinedProxies シートの該当行をユーザー入力内容でダイレクト更新する関数
  */
 function updatePredefinedProxiesSheet(ss, token, proxiesResponse, mainPayload) {
   if (!proxiesResponse) return;

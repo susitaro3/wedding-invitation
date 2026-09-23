@@ -454,7 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const foundAddress = await lookupPostalCode(rawZip);
         proxyAddressIn.value = foundAddress;
       } catch (err) {
-        alert("該当する住所が見つかりませんでした。手入力をお願いいたします。");
+        alert("該当する住所が見つかりませんでした。お手数ですが手入力をお願いいたします。");
       } finally {
         proxyBtnSearchPostal.textContent = "住所検索";
         proxyBtnSearchPostal.disabled = false;
@@ -572,7 +572,6 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           parsed = JSON.parse(rawResp);
         } catch (jsonErr) {
-          // テキスト形式の場合はパースを安全にスキップ
           return;
         }
       }
@@ -639,14 +638,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 郵便番号から住所を多重API (zipcloud fetch, ZipAddress API, YubinBango) で検索するヘルパー関数
+   * 郵便番号から住所を多重API (0: GASサーバーサイド, 1: zipcloud, 2: ZipAddress, 3: YubinBango) で検索するヘルパー関数
    */
   async function lookupPostalCode(rawZip) {
     if (!rawZip || rawZip.length !== 7) {
       throw new Error("Invalid postal code");
     }
 
-    // 1. zipcloud API (標準 fetch - zipcloudは Access-Control-Allow-Origin: * ヘッダーを返します)
+    // 0. GAS サーバーサイド郵便番号検索 (100% CORSフリー & アドブロッカー回避)
+    if (CONFIG && CONFIG.GAS_WEB_APP_URL && !CONFIG.GAS_WEB_APP_URL.includes("YOUR_GAS_WEB_APP_URL")) {
+      try {
+        const gasPostalUrl = `${CONFIG.GAS_WEB_APP_URL}?action=postal&zip=${rawZip}`;
+        let gasRes = null;
+        try {
+          const resp = await fetch(gasPostalUrl);
+          if (resp.ok) gasRes = await resp.json();
+        } catch (gasFetchErr) {
+          gasRes = await fetchJSONP(gasPostalUrl);
+        }
+        if (gasRes && gasRes.success && gasRes.address) {
+          return gasRes.address;
+        }
+      } catch (gasErr) {
+        console.warn("GAS server-side postal search failed, trying client APIs...", gasErr);
+      }
+    }
+
+    // 1. zipcloud API (標準 fetch)
     try {
       const response = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zip=${rawZip}`);
       if (response.ok) {
