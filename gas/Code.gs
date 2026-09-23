@@ -103,8 +103,6 @@ function createWeddingSheets() {
 
 /**
  * 📧 メール送信機能のテスト・承認用関数 (MailApp.sendEmail 利用)
- *
- * 実行するとダイアログが表示され、指定された実際のメールアドレス宛てにテストメールを送信します。
  */
 function testSendEmail() {
   var sendto = '';
@@ -135,7 +133,7 @@ function testSendEmail() {
           sendto = inputEmail;
         }
       } else {
-        return; // キャンセルされた場合
+        return;
       }
     } catch (e3) {
       // UIが利用できない環境
@@ -513,10 +511,23 @@ function doPost(e) {
     if (tokenMap['phone']) tokenSheet.getRange(tokenRowIndex, tokenMap['phone']).setValue(phone);
 
     // 🚀 PredefinedProxies シート（同伴者マスター）の該当行を動的ヘッダー列指定で直接更新！
-    updatePredefinedProxiesSheet(ss, token, rawPredefinedProxiesObj, payload);
+    try {
+      updatePredefinedProxiesSheet(ss, token, rawPredefinedProxiesObj, payload);
+    } catch (proxyErr) {
+      Logger.log('updatePredefinedProxiesSheet error: ' + proxyErr.toString());
+    }
 
-    // 📧 回答受付完了の自動確認メール送信！ (MailApp.sendEmail(sendto, title, body) 利用)
-    var emailResult = sendConfirmationEmail(payload);
+    // スプレッドシートへの書込み内容を確定
+    SpreadsheetApp.flush();
+
+    // 📧 回答受付完了の自動確認メール送信！（エラーがあっても例外で詰まらないように保護）
+    var emailResult = 'Not attempted';
+    try {
+      emailResult = sendConfirmationEmail(payload);
+    } catch (emailErr) {
+      Logger.log('sendConfirmationEmail error: ' + emailErr.toString());
+      emailResult = 'Error: ' + emailErr.toString();
+    }
 
     return responseJSON({
       success: true,
@@ -587,7 +598,6 @@ function sendConfirmationEmail(payload) {
     '皆様にお会いできますことを、心より楽しみにしております。\n\n' +
     groomName + ' & ' + brideName;
 
-  // ご指示の通り MailApp.sendEmail(sendto, title, body) を直接使用
   try {
     MailApp.sendEmail(sendto, title, body);
     Logger.log('MailApp.sendEmail success: ' + sendto);

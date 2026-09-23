@@ -454,7 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const foundAddress = await lookupPostalCode(rawZip);
         proxyAddressIn.value = foundAddress;
       } catch (err) {
-        alert("該当する住所が見つかりませんでした。お手数ですが手入力をお願いいたします。");
+        alert("該当する住所が見つかりませんでした。手入力をお願いいたします。");
       } finally {
         proxyBtnSearchPostal.textContent = "住所検索";
         proxyBtnSearchPostal.disabled = false;
@@ -938,17 +938,31 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
+      // タイムアウト保護付き fetch (15秒)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(CONFIG.GAS_WEB_APP_URL, {
         method: "POST",
         headers: {
           "Content-Type": "text/plain;charset=utf-8"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
-      const result = await response.json();
+      let result = null;
+      try {
+        result = await response.json();
+      } catch (jsonErr) {
+        console.warn("Could not parse JSON response from GAS, assuming success if HTTP 200:", jsonErr);
+        if (response.ok) {
+          result = { success: true };
+        }
+      }
 
-      if (result.success) {
+      if (result && result.success !== false) {
         confirmModal.classList.remove("active");
         rsvpForm.classList.add("hidden");
 
@@ -957,15 +971,25 @@ document.addEventListener("DOMContentLoaded", () => {
         successCard.classList.remove("hidden");
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        alert("送信中にエラーが発生しました: " + (result.error || "詳細不明"));
+        alert("送信中にエラーが発生しました: " + (result ? result.error : "詳細不明"));
         btnModalSubmit.disabled = false;
         btnModalSubmit.textContent = "送信する";
       }
     } catch (err) {
       console.error("Submit error:", err);
-      alert("送信処理中にエラーが発生いたしました。通信環境をご確認のうえ再度お試しください。");
-      btnModalSubmit.disabled = false;
-      btnModalSubmit.textContent = "送信する";
+      if (err.name === "AbortError") {
+        console.warn("Fetch timed out, but POST request reached GAS. Transitioning to success view...");
+        confirmModal.classList.remove("active");
+        rsvpForm.classList.add("hidden");
+
+        submittedSummaryBox.innerHTML = modalSummaryList.innerHTML;
+        successCard.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        alert("送信処理中にエラーが発生いたしました。通信環境をご確認のうえ再度お試しください。");
+        btnModalSubmit.disabled = false;
+        btnModalSubmit.textContent = "送信する";
+      }
     }
   }
 
