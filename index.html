@@ -18,11 +18,33 @@
 </head>
 <body>
 
+  <!-- 全画面オープニング アニメーション -->
+  <div id="openingOverlay" class="opening-overlay">
+    <div class="opening-content">
+      <div class="opening-sub">SAVE THE DATE</div>
+      <h1 class="opening-title">Wedding Invitation</h1>
+      <div class="opening-couple" id="openingCoupleDisplay">新郎 太郎 &amp; 新婦 花子</div>
+      <div class="opening-date" id="openingDateDisplay">2026.10.10</div>
+      <button type="button" id="btnOpenInvitation" class="btn-open-invitation">
+        <span>招待状を開く</span>
+        <span class="open-arrow">▼</span>
+      </button>
+    </div>
+  </div>
+
   <!-- ヘッダー / ヒーローセクション -->
   <header class="hero">
     <div class="container">
       <div class="hero-subtitle">Wedding Invitation</div>
       <h1 class="hero-title">結婚式のご案内</h1>
+
+      <!-- 回答完了メッセージ（結婚式のご案内と新郎新婦名の間に差し込み） -->
+      <div id="heroSuccessNotice" class="hero-success-notice hidden">
+        <div class="success-badge">✦ ご回答を承りました ✦</div>
+        <h2 class="hero-success-title">ご回答ありがとうございました</h2>
+        <p class="hero-success-subtext">皆様とお会いできますことを 心より楽しみにしております</p>
+      </div>
+
       <div class="couple-names" id="coupleNamesDisplay">新郎 太郎 &amp; 新婦 花子</div>
 
       <!-- ヒーローフォトギャラリー / スライドショー -->

@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const successCard = document.getElementById("successCard");
   const submittedSummaryBox = document.getElementById("submittedSummaryBox");
   const rsvpForm = document.getElementById("rsvpForm");
+  const heroSuccessNotice = document.getElementById("heroSuccessNotice");
 
   // Sections
   const guestInfoSection = document.getElementById("guestInfoSection");
@@ -45,7 +46,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let guestData = null;
   let predefinedProxiesList = [];
 
-  // 1. CONFIG情報でヘッダーテキストを初期化 & ヒーローフォトギャラリー起動
+  // 1. 全画面オープニング起動、CONFIG情報でヘッダーテキストを初期化 & ヒーローフォトギャラリー起動
+  initOpeningOverlay();
   initHeaderInfo();
   initHeroSlider();
 
@@ -94,6 +96,37 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================================================
 
   /**
+   * 全画面オープニングアニメーション（スプラッシュ表示＆自動/タップ進行）
+   */
+  function initOpeningOverlay() {
+    const overlay = document.getElementById("openingOverlay");
+    const btnOpen = document.getElementById("btnOpenInvitation");
+    if (!overlay) return;
+
+    function closeOverlay() {
+      overlay.classList.add("closed");
+    }
+
+    if (btnOpen) {
+      btnOpen.addEventListener("click", closeOverlay);
+    }
+
+    // 画面タップでも開く
+    overlay.addEventListener("click", (e) => {
+      if (e.target.tagName !== "BUTTON" && !e.target.closest("button")) {
+        closeOverlay();
+      }
+    });
+
+    // 3.8秒後に優しく自動開閉
+    setTimeout(() => {
+      if (!overlay.classList.contains("closed")) {
+        closeOverlay();
+      }
+    }, 3800);
+  }
+
+  /**
    * ヘッダーの式情報の自動挿入
    */
   function initHeaderInfo() {
@@ -102,10 +135,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (CONFIG.GROOM_NAME && CONFIG.BRIDE_NAME) {
       const coupleElem = document.getElementById("coupleNamesDisplay");
       if (coupleElem) coupleElem.textContent = `${CONFIG.GROOM_NAME} & ${CONFIG.BRIDE_NAME}`;
+      const openingCouple = document.getElementById("openingCoupleDisplay");
+      if (openingCouple) openingCouple.textContent = `${CONFIG.GROOM_NAME} & ${CONFIG.BRIDE_NAME}`;
     }
     if (CONFIG.WEDDING_DATE) {
       const dateElem = document.getElementById("weddingDateDisplay");
       if (dateElem) dateElem.textContent = CONFIG.WEDDING_DATE;
+      const openingDate = document.getElementById("openingDateDisplay");
+      if (openingDate) openingDate.textContent = CONFIG.WEDDING_DATE;
     }
     if (CONFIG.RECEPTION_TIME) {
       const timeElem = document.getElementById("receptionTimeDisplay");
@@ -905,6 +942,11 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmModal.classList.remove("active");
         rsvpForm.classList.add("hidden");
 
+        // 🚀 「結婚式のご案内」と「新郎新婦名」の間の完了通知エリアを表示！
+        if (heroSuccessNotice) {
+          heroSuccessNotice.classList.remove("hidden");
+        }
+
         // 完了画面へ切り替え
         submittedSummaryBox.innerHTML = modalSummaryList.innerHTML;
         successCard.classList.remove("hidden");
@@ -920,6 +962,10 @@ document.addEventListener("DOMContentLoaded", () => {
         console.warn("Fetch timed out, but POST request reached GAS. Transitioning to success view...");
         confirmModal.classList.remove("active");
         rsvpForm.classList.add("hidden");
+
+        if (heroSuccessNotice) {
+          heroSuccessNotice.classList.remove("hidden");
+        }
 
         submittedSummaryBox.innerHTML = modalSummaryList.innerHTML;
         successCard.classList.remove("hidden");
