@@ -102,6 +102,72 @@ function createWeddingSheets() {
 }
 
 /**
+ * 📧 メール送信機能のテスト・承認用関数
+ *
+ * 実行するとダイアログが表示され、指定された実際のメールアドレス宛てにテストメールを送信します。
+ */
+function testSendEmail() {
+  var userEmail = '';
+  try {
+    userEmail = Session.getEffectiveUser().getEmail();
+  } catch (e) {
+    userEmail = '';
+  }
+
+  var ui;
+  try {
+    ui = SpreadsheetApp.getUi();
+  } catch (e2) {
+    ui = null;
+  }
+
+  var recipientEmail = userEmail;
+
+  if (ui) {
+    try {
+      var promptResult = ui.prompt(
+        'テストメール送信',
+        'テストメールの送信先アドレスを入力してください（ご自身のメールアドレス）:',
+        ui.ButtonSet.OK_CANCEL
+      );
+
+      if (promptResult.getSelectedButton() === ui.Button.OK) {
+        var inputEmail = promptResult.getResponseText().trim();
+        if (inputEmail) {
+          recipientEmail = inputEmail;
+        }
+      } else {
+        return; // キャンセルされた場合
+      }
+    } catch (e3) {
+      // UIが利用できない環境
+    }
+  }
+
+  if (!recipientEmail) {
+    recipientEmail = 'yamada@example.com';
+  }
+
+  var subject = '【送信テスト】結婚式招待状 メール機能テスト';
+  var body = 'これは結婚式Web招待状の自動返信メール送信機能のテストです。\nこのメールが届いていれば、GASのメール送信権限設定は正常に完了しています。';
+
+  try {
+    GmailApp.sendEmail(recipientEmail, subject, body);
+    Logger.log('GmailAppテストメール送信成功: ' + recipientEmail);
+    if (ui) ui.alert('【送信成功】\n' + recipientEmail + ' 宛てにテストメールを送信いたしました。\n受信トレイ（または迷惑メールフォルダ）をご確認ください。');
+  } catch (err1) {
+    try {
+      MailApp.sendEmail(recipientEmail, subject, body);
+      Logger.log('MailAppテストメール送信成功: ' + recipientEmail);
+      if (ui) ui.alert('【送信成功】\n' + recipientEmail + ' 宛てにテストメールを送信いたしました。\n受信トレイ（または迷惑メールフォルダ）をご確認ください。');
+    } catch (err2) {
+      Logger.log('送信エラー: ' + err2.toString());
+      if (ui) ui.alert('【送信エラー】メール送信に失敗しました:\n' + err2.toString());
+    }
+  }
+}
+
+/**
  * ヘッダー行のスタイル装飾ヘルパー
  */
 function formatHeaderRow(sheet, colCount, headerBgColor) {
@@ -412,7 +478,7 @@ function doPost(e) {
     // 🚀 PredefinedProxies シート（同伴者マスター）の該当行を動的ヘッダー列指定で直接更新！
     updatePredefinedProxiesSheet(ss, token, rawPredefinedProxiesObj, payload);
 
-    // 📧 回答受付完了の自動Gmail確認メール送信！
+    // 📧 回答受付完了の自動Gmail確認メール送信！ (GmailApp & MailApp フォールバック)
     sendConfirmationEmail(payload);
 
     return responseJSON({
@@ -426,7 +492,7 @@ function doPost(e) {
 }
 
 /**
- * 🚀 回答登録完了時のGmail自動送信処理
+ * 🚀 回答登録完了時の自動確認メール送信処理
  */
 function sendConfirmationEmail(payload) {
   if (!payload || !payload.email || !payload.email.trim()) return;
@@ -483,11 +549,17 @@ function sendConfirmationEmail(payload) {
     '皆様にお会いできますことを、心より楽しみにしております。\n\n' +
     groomName + ' & ' + brideName;
 
+  // GmailApp → MailApp 二重フォールバックで確実に送信
   try {
     GmailApp.sendEmail(recipientEmail, subject, body);
-    Logger.log('Confirmation email successfully sent to ' + recipientEmail);
-  } catch (err) {
-    Logger.log('Failed to send confirmation email: ' + err.toString());
+    Logger.log('GmailApp sendEmail success: ' + recipientEmail);
+  } catch (err1) {
+    try {
+      MailApp.sendEmail(recipientEmail, subject, body);
+      Logger.log('MailApp sendEmail success: ' + recipientEmail);
+    } catch (err2) {
+      Logger.log('Email error: ' + err2.toString());
+    }
   }
 }
 

@@ -302,14 +302,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /**
    * 事前定義代理出席者の編集用アコーディオンカード描画関数
-   * (要件に従い、初期表示は閉じた状態＝"accordion-card" とします)
+   * (初期表示は閉じた状態＝"accordion-card")
    */
   function renderPredefinedProxyAccordionCard(proxy) {
     const isInitiallyAttending = proxy.status !== "欠席";
     const isSameAddress = proxy.sameAddress !== false; // 初期値: 主出席者と同じ住所 (true)
 
     const card = document.createElement("div");
-    // 初期表示は折りたたまれた状態にする（"open" クラスをつけない）
     card.className = "accordion-card";
     card.setAttribute("data-proxy-id", proxy.proxyId || "");
 
@@ -440,7 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
       e.stopPropagation();
     });
 
-    // 代理出席者個別の郵便番号住所自動検索 (CORS制限回避ヘルパー使用)
+    // 代理出席者個別の郵便番号住所自動検索 (多重API方式)
     proxyBtnSearchPostal.addEventListener("click", async () => {
       const rawZip = proxyPostalIn.value.replace(/[^\d]/g, "");
       if (rawZip.length !== 7) {
@@ -455,7 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const foundAddress = await lookupPostalCode(rawZip);
         proxyAddressIn.value = foundAddress;
       } catch (err) {
-        alert("該当する住所が見つかりませんでした。お手数ですが手入力をお願いいたします。");
+        alert("該当する住所が見つかりませんでした。手入力をお願いいたします。");
       } finally {
         proxyBtnSearchPostal.textContent = "住所検索";
         proxyBtnSearchPostal.disabled = false;
@@ -573,7 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           parsed = JSON.parse(rawResp);
         } catch (jsonErr) {
-          console.log("rawResp is formatted string, skipping JSON parse for proxy restoration.");
+          // テキスト形式の場合はパースを安全にスキップ
           return;
         }
       }
@@ -640,18 +639,25 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 郵便番号から住所を多重API (JSONP & fetch) で検索するヘルパー関数
+   * 郵便番号から住所を多重API (zipcloud fetch, ZipAddress API, YubinBango) で検索するヘルパー関数
    */
   async function lookupPostalCode(rawZip) {
-    // 1. zipcloud JSONP 方式 (CORS完全回避)
+    if (!rawZip || rawZip.length !== 7) {
+      throw new Error("Invalid postal code");
+    }
+
+    // 1. zipcloud API (標準 fetch - zipcloudは Access-Control-Allow-Origin: * ヘッダーを返します)
     try {
-      const data = await fetchJSONP(`https://zipcloud.ibsnet.co.jp/api/search?zip=${rawZip}`);
-      if (data && data.status === 200 && data.results && data.results.length > 0) {
-        const res = data.results[0];
-        return `${res.address1}${res.address2}${res.address3}`;
+      const response = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zip=${rawZip}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.status === 200 && data.results && data.results.length > 0) {
+          const res = data.results[0];
+          return `${res.address1}${res.address2}${res.address3}`;
+        }
       }
-    } catch (e) {
-      console.warn("zipcloud JSONP lookup failed, trying ZipAddress API...", e);
+    } catch (e1) {
+      console.warn("zipcloud fetch failed, trying ZipAddress API...", e1);
     }
 
     // 2. ZipAddress API フォールバック
@@ -664,17 +670,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     } catch (e2) {
-      console.warn("ZipAddress API fetch failed, trying ZipAddress JSONP...", e2);
+      console.warn("ZipAddress API fetch failed, trying YubinBango...", e2);
     }
 
-    // 3. ZipAddress JSONP フォールバック
+    // 3. YubinBango (GitHub Pages 静的JSONP) フォールバック
     try {
-      const data2 = await fetchJSONP(`https://api.zipaddress.net/?zip=${rawZip}`);
-      if (data2 && data2.code === 200 && data2.data && data2.data.fullAddress) {
-        return data2.data.fullAddress;
+      const prefList = ["", "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県", "茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県", "新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県", "岐阜県", "静岡県", "愛知県", "三重県", "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県", "鳥取県", "島根県", "岡山県", "広島県", "山口県", "徳島県", "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"];
+      const prefix = rawZip.substring(0, 3);
+      const suffix = rawZip.substring(3);
+      const data3 = await fetchJSONP(`https://yubinbango.github.io/yubinbango-data/data/${prefix}.js`);
+      if (data3 && data3[suffix]) {
+        const prefCode = data3[suffix][0];
+        const prefName = prefList[prefCode] || "";
+        const city = data3[suffix][1] || "";
+        const town = data3[suffix][2] || "";
+        return `${prefName}${city}${town}`;
       }
     } catch (e3) {
-      console.error("All postal code APIs failed:", e3);
+      console.error("All postal lookup methods failed:", e3);
     }
 
     throw new Error("Address not found");
