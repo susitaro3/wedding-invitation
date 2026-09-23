@@ -730,7 +730,6 @@ function formatPredefinedProxiesResponse(proxiesRaw) {
       if (kana.trim().length > 0) details.push('ふりがな: ' + kana.trim());
       if (p.allergies) details.push('アレルギー: ' + p.allergies);
       if (p.sameAddress !== undefined) details.push(p.sameAddress ? '住所: 同一' : '住所: 個別');
-      if (p.proxyId) details.push('ID: ' + p.proxyId);
       return name.trim() + ' (' + details.join(', ') + ')';
     }).join('\n');
   }
