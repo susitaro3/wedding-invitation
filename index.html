@@ -21,6 +21,26 @@
       <h1 class="hero-title">結婚式のご案内</h1>
       <div class="couple-names" id="coupleNamesDisplay">新郎 太郎 &amp; 新婦 花子</div>
 
+      <!-- ヒーローフォトギャラリー / スライドショー -->
+      <div class="hero-photo-frame">
+        <div class="hero-slider" id="heroSlider">
+          <div class="hero-slide active">
+            <img src="images/FJI_6409.jpg" alt="結婚式フォト 1">
+          </div>
+          <div class="hero-slide">
+            <img src="images/FJI_6424.jpg" alt="結婚式フォト 2">
+          </div>
+          <div class="hero-slide">
+            <img src="images/FJI_6456.jpg" alt="結婚式フォト 3">
+          </div>
+        </div>
+        <div class="slider-dots" id="sliderDots">
+          <span class="dot active" data-index="0"></span>
+          <span class="dot" data-index="1"></span>
+          <span class="dot" data-index="2"></span>
+        </div>
+      </div>
+
       <div class="invitation-text">
         皆様におかれましては ますますご清祥のこととお慶び申し上げます<br>
         このたび 私たちは結婚式を挙げることとなりました<br>
@@ -181,14 +201,10 @@
           <input type="email" id="email" name="email" placeholder="example@domain.com">
         </div>
 
-        <!-- 郵便番号 + 自動入力ボタン -->
+        <!-- 郵便番号 -->
         <div class="form-group">
           <label class="form-label" for="postalCode">郵便番号</label>
-          <div class="postal-group">
-            <input type="text" id="postalCode" name="postalCode" placeholder="1000001 (ハイフンなし可)" maxlength="8">
-            <button type="button" id="btnSearchPostal" class="btn-secondary">住所自動入力</button>
-          </div>
-          <div class="form-subtext">※7桁の数字を入力し「住所自動入力」を押すと住所が入ります</div>
+          <input type="text" id="postalCode" name="postalCode" placeholder="例: 100-0001" maxlength="8">
         </div>
 
         <!-- 住所 -->

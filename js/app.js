@@ -35,7 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const messageInput = document.getElementById("message");
 
   // Buttons & Modal
-  const btnSearchPostal = document.getElementById("btnSearchPostal");
   const btnConfirm = document.getElementById("btnConfirm");
   const confirmModal = document.getElementById("confirmModal");
   const modalSummaryList = document.getElementById("modalSummaryList");
@@ -46,8 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let guestData = null;
   let predefinedProxiesList = [];
 
-  // 1. CONFIG情報でヘッダーテキストを初期化
+  // 1. CONFIG情報でヘッダーテキストを初期化 & ヒーローフォトギャラリー起動
   initHeaderInfo();
+  initHeroSlider();
 
   // 2. URLパラメータからトークンを取得
   currentToken = getTokenFromURL();
@@ -70,9 +70,6 @@ document.addEventListener("DOMContentLoaded", () => {
       toggleAttendanceSections(e.target.value);
     });
   });
-
-  // 郵便番号自動入力ボタン
-  btnSearchPostal.addEventListener("click", searchAddressFromPostalCode);
 
   // 主出席者の住所入力変更時に「主出席者と同じ住所」選択済みの代理出席者カードへリアルタイム連動同期
   postalCodeInput.addEventListener("input", syncAddressesToSameAddressProxies);
@@ -126,6 +123,62 @@ document.addEventListener("DOMContentLoaded", () => {
       const deadlineElem = document.getElementById("responseDeadlineDisplay");
       if (deadlineElem) deadlineElem.textContent = `${CONFIG.RESPONSE_DEADLINE} まで`;
     }
+  }
+
+  /**
+   * ヒーローフォトギャラリー（3枚の画像のフェードスライドショー）制御
+   */
+  function initHeroSlider() {
+    const slides = document.querySelectorAll(".hero-slide");
+    const dots = document.querySelectorAll(".slider-dots .dot");
+    if (!slides || slides.length === 0) return;
+
+    let currentSlide = 0;
+    let slideTimer = null;
+
+    function goToSlide(index) {
+      slides.forEach((slide, i) => {
+        if (i === index) {
+          slide.classList.add("active");
+        } else {
+          slide.classList.remove("active");
+        }
+      });
+      dots.forEach((dot, i) => {
+        if (i === index) {
+          dot.classList.add("active");
+        } else {
+          dot.classList.remove("active");
+        }
+      });
+      currentSlide = index;
+    }
+
+    function nextSlide() {
+      const nextIndex = (currentSlide + 1) % slides.length;
+      goToSlide(nextIndex);
+    }
+
+    function startTimer() {
+      stopTimer();
+      slideTimer = setInterval(nextSlide, 4500); // 4.5秒ごとに自動切替
+    }
+
+    function stopTimer() {
+      if (slideTimer) clearInterval(slideTimer);
+    }
+
+    dots.forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        const index = parseInt(e.target.getAttribute("data-index"), 10);
+        if (!isNaN(index)) {
+          goToSlide(index);
+          startTimer();
+        }
+      });
+    });
+
+    startTimer();
   }
 
   /**
@@ -385,10 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="proxy-custom-address-box ${isSameAddress ? "hidden" : ""}">
             <div class="form-group">
               <label class="form-label">郵便番号</label>
-              <div class="postal-group">
-                <input type="text" class="proxy-postal" value="${escapeHtml(proxy.postalCode || "")}" placeholder="1000001" maxlength="8">
-                <button type="button" class="btn-secondary proxy-btn-search-postal">住所検索</button>
-              </div>
+              <input type="text" class="proxy-postal" value="${escapeHtml(proxy.postalCode || "")}" placeholder="例: 100-0001" maxlength="8">
             </div>
             <div class="form-group">
               <label class="form-label">住所</label>
@@ -416,9 +466,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const ageSelect = card.querySelector(".proxy-age-category");
     const sameAddressCb = card.querySelector(".proxy-same-address-cb");
     const customAddressBox = card.querySelector(".proxy-custom-address-box");
-    const proxyPostalIn = card.querySelector(".proxy-postal");
-    const proxyAddressIn = card.querySelector(".proxy-address");
-    const proxyBtnSearchPostal = card.querySelector(".proxy-btn-search-postal");
 
     // ヘッダータイトル更新
     const updateTitle = () => {
@@ -454,28 +501,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sameAddressCb.addEventListener("click", (e) => {
       e.stopPropagation();
-    });
-
-    // 代理出席者個別の郵便番号住所自動検索 (タイムアウト付き多重API)
-    proxyBtnSearchPostal.addEventListener("click", async () => {
-      const rawZip = proxyPostalIn.value.replace(/[^\d]/g, "");
-      if (rawZip.length !== 7) {
-        alert("郵便番号は7桁の数字でご入力ください。");
-        return;
-      }
-
-      proxyBtnSearchPostal.textContent = "検索中...";
-      proxyBtnSearchPostal.disabled = true;
-
-      try {
-        const foundAddress = await lookupPostalCode(rawZip);
-        proxyAddressIn.value = foundAddress;
-      } catch (err) {
-        alert("該当する住所が見つかりませんでした。お手数ですが手入力をお願いいたします。");
-      } finally {
-        proxyBtnSearchPostal.textContent = "住所検索";
-        proxyBtnSearchPostal.disabled = false;
-      }
     });
 
     // チェックボックスイベント
@@ -651,94 +676,6 @@ document.addEventListener("DOMContentLoaded", () => {
       allergySection.classList.remove("hidden");
       proxySection.classList.remove("hidden");
       guestMetaFields.classList.remove("hidden");
-    }
-  }
-
-  /**
-   * 郵便番号から住所を多重API (zipcloud, ZipAddress, YubinBango) で検索するヘルパー関数 (各ステップ3秒タイムアウト)
-   */
-  async function lookupPostalCode(rawZip) {
-    if (!rawZip || rawZip.length !== 7) {
-      throw new Error("Invalid postal code");
-    }
-
-    // 1. zipcloud API (高速・標準fetch・3秒タイムアウト)
-    try {
-      const data1 = await fetchWithTimeout(`https://zipcloud.ibsnet.co.jp/api/search?zip=${rawZip}`, 3000);
-      if (data1 && data1.status === 200 && data1.results && data1.results.length > 0) {
-        const res = data1.results[0];
-        return `${res.address1}${res.address2}${res.address3}`;
-      }
-    } catch (e1) {
-      console.warn("zipcloud fetch failed or timed out, trying ZipAddress API...", e1);
-    }
-
-    // 2. ZipAddress API (フォールバック・3秒タイムアウト)
-    try {
-      const data2 = await fetchWithTimeout(`https://api.zipaddress.net/?zip=${rawZip}`, 3000);
-      if (data2 && data2.code === 200 && data2.data && data2.data.fullAddress) {
-        return data2.data.fullAddress;
-      }
-    } catch (e2) {
-      console.warn("ZipAddress API fetch failed, trying YubinBango...", e2);
-    }
-
-    // 3. YubinBango (GitHub Pages 静的JSONテキスト取得・3秒タイムアウト)
-    try {
-      const prefList = ["", "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県", "茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県", "新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県", "岐阜県", "静岡県", "愛知県", "三重県", "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県", "鳥取県", "島根県", "岡山県", "広島県", "山口県", "徳島県", "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"];
-      const prefix = rawZip.substring(0, 3);
-      const suffix = rawZip.substring(3);
-
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 3000);
-      const resp = await fetch(`https://yubinbango.github.io/yubinbango-data/data/${prefix}.js`, { signal: controller.signal });
-      clearTimeout(timer);
-
-      if (resp.ok) {
-        const text = await resp.text();
-        const jsonText = text.replace(/^\$yubin\(/, "").replace(/\);?$/, "");
-        const yubinData = JSON.parse(jsonText);
-        if (yubinData && yubinData[suffix]) {
-          const prefCode = yubinData[suffix][0];
-          const prefName = prefList[prefCode] || "";
-          const city = yubinData[suffix][1] || "";
-          const town = yubinData[suffix][2] || "";
-          return `${prefName}${city}${town}`;
-        }
-      }
-    } catch (e3) {
-      console.error("All postal lookup methods failed:", e3);
-    }
-
-    throw new Error("Address not found");
-  }
-
-  /**
-   * 郵便番号から住所を自動検索 (主出席者用)
-   */
-  async function searchAddressFromPostalCode() {
-    const rawZip = postalCodeInput.value.replace(/[^\d]/g, "");
-    if (rawZip.length !== 7) {
-      alert("郵便番号は7桁の数字でご入力ください。");
-      return;
-    }
-
-    btnSearchPostal.textContent = "検索中...";
-    btnSearchPostal.disabled = true;
-
-    try {
-      const foundAddress = await lookupPostalCode(rawZip);
-      addressInput.value = foundAddress;
-      buildingInput.focus();
-
-      // 連動している代理出席者住所を同期
-      syncAddressesToSameAddressProxies();
-    } catch (e) {
-      console.error("Postal search error:", e);
-      alert("該当する住所が見つかりませんでした。お手数ですが手入力をお願いいたします。");
-    } finally {
-      btnSearchPostal.textContent = "住所自動入力";
-      btnSearchPostal.disabled = false;
     }
   }
 
