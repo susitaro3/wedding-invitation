@@ -1,854 +1,359 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>結婚式のご案内 - Web招待状</title>
+  <title>結婚式のご案内 - Wedding Invitation</title>
 
-  <!-- Google Fonts -->
+  <!-- 高速表示用プレロード & GASサーバー事前DNS/SSL接続 -->
+  <link rel="preload" as="image" href="images/FJI_6409.jpg">
+  <link rel="dns-prefetch" href="https://script.google.com">
+  <link rel="dns-prefetch" href="https://script.googleusercontent.com">
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://script.googleusercontent.com">
+
+  <!-- Webフォント（Shippori Mincho & Noto Sans JP） -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Noto+Serif+JP:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <style>
-    :root {
-      --primary: #9e6d75;
-      --primary-hover: #88575e;
-      --bg: #fcf8f6;
-      --card-bg: #ffffff;
-      --text: #4a3e3e;
-      --text-muted: #7d6e6e;
-      --border: #e8dadb;
-      --accent: #f7edea;
-      --error: #d93838;
-      --success: #2e7d32;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: 'Noto Serif JP', serif, sans-serif;
-      line-height: 1.7;
-      padding: 20px 12px;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    .container {
-      max-width: 680px;
-      margin: 0 auto;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px 32px;
-      box-shadow: 0 10px 30px rgba(158, 109, 117, 0.08);
-    }
-
-    .header-title {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .header-title .names {
-      font-family: 'Cormorant Garamond', 'Noto Serif JP', serif;
-      font-size: 1.8rem;
-      font-weight: 600;
-      color: var(--primary);
-      letter-spacing: 0.08em;
-      margin-bottom: 8px;
-    }
-
-    .header-title .subtitle {
-      font-size: 0.95rem;
-      color: var(--text-muted);
-      letter-spacing: 0.1em;
-    }
-
-    .event-card {
-      background-color: var(--accent);
-      border-radius: 12px;
-      padding: 24px;
-      text-align: center;
-      margin-bottom: 32px;
-      border: 1px solid rgba(158, 109, 117, 0.15);
-    }
-
-    .event-card .guest-greeting {
-      font-size: 1.15rem;
-      font-weight: 600;
-      margin-bottom: 12px;
-    }
-
-    .event-card .info-item {
-      margin: 6px 0;
-      font-size: 0.98rem;
-    }
-
-    .event-card .deadline {
-      margin-top: 14px;
-      font-size: 0.9rem;
-      color: var(--primary);
-      font-weight: 600;
-    }
-
-    .section-title {
-      font-size: 1.15rem;
-      font-weight: 600;
-      color: var(--primary);
-      border-bottom: 2px solid var(--border);
-      padding-bottom: 6px;
-      margin: 32px 0 18px 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-title::before {
-      content: '';
-      display: inline-block;
-      width: 4px;
-      height: 18px;
-      background-color: var(--primary);
-      border-radius: 2px;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-group.grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    label {
-      display: block;
-      font-size: 0.92rem;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: var(--text);
-    }
-
-    label .req {
-      color: var(--error);
-      font-size: 0.8rem;
-      margin-left: 4px;
-    }
-
-    label .opt {
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      margin-left: 4px;
-      font-weight: normal;
-    }
-
-    input[type="text"],
-    input[type="email"],
-    input[type="tel"],
-    select,
-    textarea {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.95rem;
-      background-color: #fff;
-      color: var(--text);
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(158, 109, 117, 0.15);
-    }
-
-    textarea {
-      min-height: 100px;
-      resize: vertical;
-    }
-
-    /* Attendance Radio Buttons */
-    .radio-group {
-      display: flex;
-      gap: 16px;
-      margin-top: 8px;
-    }
-
-    .radio-card {
-      flex: 1;
-      position: relative;
-    }
-
-    .radio-card input[type="radio"] {
-      position: absolute;
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .radio-card label {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      cursor: pointer;
-      text-align: center;
-      font-size: 1.05rem;
-      font-weight: 600;
-      background-color: #fff;
-      transition: all 0.2s ease;
-      margin-bottom: 0;
-    }
-
-    .radio-card input[type="radio"]:checked + label {
-      border-color: var(--primary);
-      background-color: var(--accent);
-      color: var(--primary);
-      box-shadow: 0 4px 12px rgba(158, 109, 117, 0.12);
-    }
-
-    .postal-wrapper {
-      display: flex;
-      gap: 8px;
-    }
-
-    .postal-wrapper input {
-      flex: 1;
-    }
-
-    .btn-secondary {
-      padding: 10px 16px;
-      background-color: #f0e6e7;
-      color: var(--primary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background-color 0.2s;
-    }
-
-    .btn-secondary:hover {
-      background-color: var(--border);
-    }
-
-    .submit-btn {
-      width: 100%;
-      padding: 16px;
-      background-color: var(--primary);
-      color: #ffffff;
-      border: none;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      cursor: pointer;
-      margin-top: 36px;
-      box-shadow: 0 6px 20px rgba(158, 109, 117, 0.25);
-      transition: background-color 0.2s, transform 0.1s;
-    }
-
-    .submit-btn:hover {
-      background-color: var(--primary-hover);
-    }
-
-    .submit-btn:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .help-text {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      margin-top: 4px;
-      line-height: 1.5;
-    }
-
-    .proxy-card {
-      background-color: #fbf6f6;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-
-    .proxy-card-header {
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: 10px;
-      font-size: 0.95rem;
-    }
-
-    .status-msg {
-      text-align: center;
-      margin-top: 16px;
-      font-size: 0.95rem;
-      min-height: 24px;
-    }
-
-    .status-msg.error {
-      color: var(--error);
-      font-weight: 600;
-    }
-
-    .status-msg.success {
-      color: var(--success);
-      font-weight: 600;
-    }
-
-    .loading-screen, .complete-screen {
-      text-align: center;
-      padding: 60px 20px;
-    }
-
-    .complete-icon {
-      font-size: 3rem;
-      color: var(--primary);
-      margin-bottom: 16px;
-    }
-
-    footer {
-      text-align: center;
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      margin-top: 24px;
-    }
-
-    @media (max-width: 540px) {
-      .container {
-        padding: 24px 16px;
-      }
-      .form-group.grid-2 {
-        grid-template-columns: 1fr;
-      }
-      .radio-group {
-        flex-direction: column;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <div class="container" id="app">
-    <div class="loading-screen" id="loadingView">
-      <p>ご案内情報を読み込んでおります...</p>
+  <!-- 全画面オープニング アニメーション (封筒演出) -->
+  <div id="openingOverlay" class="opening-overlay">
+    <div class="envelope-container" id="envelopeContainer">
+      <div class="envelope-wrapper">
+        <!-- 封筒フラップ (フタ) -->
+        <div class="envelope-flap" id="envelopeFlap">
+          <!-- シーリングワックス (封かん) -->
+          <div class="wax-seal">✦</div>
+        </div>
+
+        <!-- 封筒内部の招待状カード -->
+        <div class="envelope-letter" id="envelopeLetter">
+          <div class="opening-sub">SAVE THE DATE</div>
+          <h1 class="opening-title">Wedding Invitation</h1>
+          <div class="opening-couple" id="openingCoupleDisplay">新郎 太郎 &amp; 新婦 花子</div>
+          <div class="opening-date" id="openingDateDisplay">2026.10.10</div>
+        </div>
+
+        <!-- 封筒本体ポケット -->
+        <div class="envelope-pocket"></div>
+      </div>
+
+      <!-- 開封ボタン (ボタンを押さないと遷移しません) -->
+      <div class="opening-action-wrapper">
+        <button type="button" id="btnOpenInvitation" class="btn-open-envelope">
+          <span>招待状を開く</span>
+        </button>
+      </div>
     </div>
   </div>
 
-  <footer>
-    <p>&copy; 結婚式ご案内 Web招待状</p>
-  </footer>
+  <!-- ヘッダー / ヒーローセクション -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-subtitle">Wedding Invitation</div>
+      <h1 class="hero-title">結婚式のご案内</h1>
 
-  <!-- 隠しiframe (GAS doPostクロスドメイン送信対応) -->
-  <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+      <!-- 回答完了メッセージ（結婚式のご案内と新郎新婦名の間に差し込み） -->
+      <div id="heroSuccessNotice" class="hero-success-notice hidden">
+        <div class="success-badge">✦ ご回答を承りました ✦</div>
+        <h2 class="hero-success-title">ご回答ありがとうございました</h2>
+        <p class="hero-success-subtext">皆様とお会いできますことを 心より楽しみにしております</p>
+      </div>
 
-  <script src="config.js"></script>
-  <script>
-    (function () {
-      const app = document.getElementById('app');
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = (urlParams.get('id') || urlParams.get('token') || '').trim();
+      <div class="couple-names" id="coupleNamesDisplay">新郎 太郎 &amp; 新婦 花子</div>
 
-      // 設定取得
-      const config = window.WEDDING_CONFIG || {};
-      const apiUrl = config.apiUrl || window.WEDDING_API_URL || '';
-
-      // API URLの未設定チェック
-      if (!apiUrl || apiUrl.includes('PASTE_YOUR_')) {
-        showError('設定エラー: `config.js` の `apiUrl` (Apps Script Web App URL) が設定されていません。管理者に連絡してください。');
-        return;
-      }
-
-      // トークンの有無チェック
-      if (!token) {
-        showError('招待URLが見つかりません。お送りした個別URL（?id=...）からアクセスしてください。');
-        return;
-      }
-
-      // 1. JSONP で GAS から招待情報取得 (doGet)
-      loadInvitationData(token);
-
-      function loadInvitationData(guestToken) {
-        const callbackName = 'onInvitationLoaded_' + Math.floor(Math.random() * 1000000);
-        let scriptTag = null;
-
-        const timeoutTimer = setTimeout(() => {
-          if (scriptTag && scriptTag.parentNode) scriptTag.parentNode.removeChild(scriptTag);
-          delete window[callbackName];
-          showError('通信エラー: サーバからの応答がありませんでした。時間を置いて再度お試しください。');
-        }, 12000);
-
-        window[callbackName] = function (res) {
-          clearTimeout(timeoutTimer);
-          if (scriptTag && scriptTag.parentNode) scriptTag.parentNode.removeChild(scriptTag);
-          delete window[callbackName];
-
-          if (!res || !res.ok) {
-            showError(res ? res.message : '招待情報の取得に失敗しました。');
-            return;
-          }
-
-          renderForm(res);
-        };
-
-        scriptTag = document.createElement('script');
-        scriptTag.src = `${apiUrl}?action=invitation&id=${encodeURIComponent(guestToken)}&callback=${callbackName}`;
-        scriptTag.onerror = function () {
-          clearTimeout(timeoutTimer);
-          delete window[callbackName];
-          showError('通信エラー: GASサーバーへの接続に失敗しました。ウェブアプリの公開範囲が「全員」になっているかご確認ください。');
-        };
-
-        document.head.appendChild(scriptTag);
-      }
-
-      function showError(msg) {
-        app.innerHTML = `
-          <div class="loading-screen">
-            <h2 style="color: var(--error); margin-bottom: 12px;">ご案内を表示できません</h2>
-            <p class="help-text" style="font-size: 0.95rem;">${escapeHtml(msg)}</p>
+      <!-- ヒーローフォトギャラリー / スライドショー -->
+      <div class="hero-photo-frame" id="heroPhotoFrame">
+        <div class="hero-slider" id="heroSlider">
+          <div class="hero-slide active">
+            <img src="images/FJI_6409.jpg" alt="結婚式フォト 1" loading="eager" fetchpriority="high">
           </div>
-        `;
-      }
+          <div class="hero-slide">
+            <img src="images/FJI_6424.jpg" alt="結婚式フォト 2" loading="lazy">
+          </div>
+          <div class="hero-slide">
+            <img src="images/FJI_6456.jpg" alt="結婚式フォト 3" loading="lazy">
+          </div>
+        </div>
+        <div class="slider-dots" id="sliderDots">
+          <span class="dot active" data-index="0"></span>
+          <span class="dot" data-index="1"></span>
+          <span class="dot" data-index="2"></span>
+        </div>
+      </div>
 
-      function renderForm(data) {
-        const guest = data.guest || {};
-        const profile = guest.profile || {};
-        const eventInfo = data.eventInfo || {};
-        const predefinedProxies = data.predefinedProxies || [];
+      <!-- 回答完了時専用のお礼画像 (`ending.jpg`) -->
+      <div class="hero-ending-frame hidden" id="heroEndingFrame">
+        <img src="images/ending.jpg" alt="ご回答ありがとうございました" loading="eager" class="hero-ending-img">
+      </div>
 
-        const groom = eventInfo.groom || config.groom || '新郎';
-        const bride = eventInfo.bride || config.bride || '新婦';
-        const eventDate = eventInfo.eventDate || config.eventDate || '';
-        const venue = eventInfo.venue || config.venue || '';
-        const replyDeadline = eventInfo.replyDeadline || config.replyDeadline || '';
+      <div class="invitation-text">
+        皆様におかれましては ますますご清祥のこととお慶び申し上げます<br>
+        このたび 私たちは結婚式を挙げることとなりました<br>
+        日頃お世話になっております皆様をお招きして<br>
+        ささやかな宴を催したく存じます<br>
+        ご多用中 誠に恐縮ではございますが<br>
+        ぜひご出席くださいますようご案内申し上げます
+      </div>
 
-        app.innerHTML = `
-          <div class="header-title">
-            <div class="names">${escapeHtml(groom)} & ${escapeHtml(bride)}</div>
-            <div class="subtitle">WEDDING INVITATION</div>
+      <div class="info-box">
+        <div class="info-item">
+          <span class="info-label">日時：</span>
+          <span class="info-value" id="weddingDateDisplay">2026年10月10日（土）</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">時間：</span>
+          <span class="info-value" id="receptionTimeDisplay">開場 11:30 / 挙式 12:00 / 披露宴 13:00</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">場所：</span>
+          <span class="info-value" id="venueNameDisplay">グランドホテル東京 鳳凰の間</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">住所：</span>
+          <span class="info-value" id="venueAddressDisplay">東京都千代田区1-1-1</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">回答期日：</span>
+          <span class="info-value" id="responseDeadlineDisplay">2026年9月1日（火）まで</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="container">
+
+    <!-- ① ローディング画面 -->
+    <div id="loadingContainer" class="loading-container">
+      <div class="spinner"></div>
+      <p>招待状データを読み込んでいます...</p>
+    </div>
+
+    <!-- ② エラー画面 (トークン無効時など) -->
+    <div id="errorCard" class="error-card hidden">
+      <div class="error-title">招待状URLをご確認ください</div>
+      <p id="errorMessageText">無効なURLまたはトークンが指定されていません。お送りした招待状メッセージのURLをご確認ください。</p>
+    </div>
+
+    <!-- ③ 完了画面 (回答完了時の内容控え) -->
+    <div id="successCard" class="card success-card hidden">
+      <div id="submittedSummaryBox" class="info-box" style="text-align: left; margin-top: 0;">
+        <!-- 送信済みの回答概要がここに表示されます -->
+      </div>
+    </div>
+
+    <!-- ④ 回答フォーム -->
+    <form id="rsvpForm" class="hidden" novalidate>
+
+      <!-- 出欠選択 -->
+      <section class="card">
+        <h2 class="section-title">
+          ご出欠の確認
+          <span class="required-badge">必須</span>
+        </h2>
+
+        <div class="attendance-selector">
+          <label class="attendance-option">
+            <input type="radio" name="attendance" value="出席" required>
+            <span class="attendance-btn">
+              <span class="btn-title">ご出席</span>
+              <span class="btn-sub">ATTEND</span>
+            </span>
+          </label>
+
+          <label class="attendance-option">
+            <input type="radio" name="attendance" value="欠席" required>
+            <span class="attendance-btn">
+              <span class="btn-title">ご欠席</span>
+              <span class="btn-sub">DECLINE</span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- ゲスト基本情報 (スプレッドシートから自動取得) -->
+      <section class="card" id="guestInfoSection">
+        <h2 class="section-title">
+          ご芳名（ゲスト情報）
+          <span class="required-badge">必須</span>
+        </h2>
+
+        <!-- 漢字 姓・名 -->
+        <div class="input-row">
+          <div class="form-group">
+            <label class="form-label" for="lastName">姓</label>
+            <input type="text" id="lastName" name="lastName" placeholder="例: 山田" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="firstName">名</label>
+            <input type="text" id="firstName" name="firstName" placeholder="例: 太郎" required>
+          </div>
+        </div>
+
+        <!-- かな せい・めい -->
+        <div class="input-row">
+          <div class="form-group">
+            <label class="form-label" for="kanaLastName">せい（よみがな）</label>
+            <input type="text" id="kanaLastName" name="kanaLastName" placeholder="例: やまだ" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="kanaFirstName">めい（よみがな）</label>
+            <input type="text" id="kanaFirstName" name="kanaFirstName" placeholder="例: たろう" required>
+          </div>
+        </div>
+
+        <!-- 新郎側/新婦側 & 年齢区分 (出席時のみ表示) -->
+        <div id="guestMetaFields" class="input-row">
+          <div class="form-group">
+            <label class="form-label">新郎側・新婦側</label>
+            <div class="radio-inline-group">
+              <label class="radio-inline-label">
+                <input type="radio" name="side" value="新郎側"> 新郎側
+              </label>
+              <label class="radio-inline-label">
+                <input type="radio" name="side" value="新婦側"> 新婦側
+              </label>
+            </div>
           </div>
 
-          <div class="event-card">
-            <div class="guest-greeting">${escapeHtml(guest.name || 'ゲスト')} 様</div>
-            <div class="info-item"><b>日時:</b> ${escapeHtml(eventDate)}</div>
-            <div class="info-item"><b>会場:</b> ${escapeHtml(venue)}</div>
-            <div class="deadline">※ご回答期限: ${escapeHtml(replyDeadline)}</div>
+          <div class="form-group">
+            <label class="form-label" for="ageCategory">年齢区分</label>
+            <select id="ageCategory" name="ageCategory">
+              <option value="大人">大人</option>
+              <option value="子供">子供（小学生以下）</option>
+              <option value="幼児">幼児（座席・食事なし）</option>
+            </select>
           </div>
+        </div>
+      </section>
 
-          <form id="weddingForm" action="${escapeHtml(apiUrl)}" method="POST" target="hidden_iframe">
-            <input type="hidden" name="payload" id="payloadInput">
+      <!-- 連絡先・住所情報 (出席時のみ表示) -->
+      <section class="card" id="contactSection">
+        <h2 class="section-title">
+          ご連絡先・ご住所
+          <span class="required-badge">必須</span>
+        </h2>
 
-            <!-- 出欠選択 -->
-            <div class="form-group">
-              <label>ご出欠<span class="req">*</span></label>
-              <div class="radio-group">
-                <div class="radio-card">
-                  <input type="radio" id="attending" name="attendance" value="出席" required>
-                  <label for="attending">ご出席</label>
-                </div>
-                <div class="radio-card">
-                  <input type="radio" id="absent" name="attendance" value="欠席" required>
-                  <label for="absent">ご欠席</label>
-                </div>
-              </div>
-            </div>
+        <!-- メールアドレス -->
+        <div class="form-group">
+          <label class="form-label" for="email">メールアドレス</label>
+          <input type="email" id="email" name="email" placeholder="example@domain.com">
+        </div>
 
-            <!-- 出席時入力エリア -->
-            <div id="attendanceDetails" class="hidden">
+        <!-- 郵便番号 -->
+        <div class="form-group">
+          <label class="form-label" for="postalCode">郵便番号</label>
+          <input type="text" id="postalCode" name="postalCode" placeholder="例: 100-0001" maxlength="8">
+        </div>
 
-              <!-- ゲスト情報 -->
-              <div class="section-title">ご芳名・区分</div>
+        <!-- 住所 -->
+        <div class="form-group">
+          <label class="form-label" for="address">住所</label>
+          <input type="text" id="address" name="address" placeholder="都道府県・市区町村・番地">
+        </div>
 
-              <div class="form-group grid-2">
-                <div>
-                  <label for="lastName">姓<span class="req">*</span></label>
-                  <input type="text" id="lastName" value="${escapeHtml(profile.lastName || '')}" placeholder="山田">
-                </div>
-                <div>
-                  <label for="firstName">名<span class="req">*</span></label>
-                  <input type="text" id="firstName" value="${escapeHtml(profile.firstName || '')}" placeholder="太郎">
-                </div>
-              </div>
+        <!-- 建物名・部屋番号 -->
+        <div class="form-group">
+          <label class="form-label" for="building">
+            建物名・部屋番号
+            <span class="optional-badge">任意</span>
+          </label>
+          <input type="text" id="building" name="building" placeholder="〇〇マンション 101号室">
+        </div>
 
-              <div class="form-group grid-2">
-                <div>
-                  <label for="lastNameKana">せい (よみがな)<span class="req">*</span></label>
-                  <input type="text" id="lastNameKana" value="${escapeHtml(profile.lastNameKana || '')}" placeholder="やまだ">
-                </div>
-                <div>
-                  <label for="firstNameKana">めい (よみがな)<span class="req">*</span></label>
-                  <input type="text" id="firstNameKana" value="${escapeHtml(profile.firstNameKana || '')}" placeholder="たろう">
-                </div>
-              </div>
+        <!-- 電話番号 -->
+        <div class="form-group">
+          <label class="form-label" for="phone">電話番号</label>
+          <input type="tel" id="phone" name="phone" placeholder="09012345678">
+        </div>
+      </section>
 
-              <div class="form-group grid-2">
-                <div>
-                  <label>新郎側 / 新婦側<span class="req">*</span></label>
-                  <select id="side">
-                    <option value="">選択してください</option>
-                    <option value="新郎側">新郎側</option>
-                    <option value="新婦側">新婦側</option>
-                  </select>
-                </div>
-                <div>
-                  <label>年齢区分<span class="req">*</span></label>
-                  <select id="ageCategory">
-                    <option value="">選択してください</option>
-                    <option value="大人">大人</option>
-                    <option value="子供">子供</option>
-                    <option value="幼児">幼児</option>
-                  </select>
-                </div>
-              </div>
+      <!-- アレルギー・食事制限 (出席時のみ表示) -->
+      <section class="card" id="allergySection">
+        <h2 class="section-title">
+          アレルギー・食事制限
+          <span class="optional-badge">任意</span>
+        </h2>
+        <div class="form-group">
+          <label class="form-label" for="allergies">アレルギーやお控えになっている食材がございましたらご記入ください</label>
+          <textarea id="allergies" name="allergies" placeholder="例: エビアレルギー（エキスも不可）、アルコールNG など"></textarea>
+        </div>
+      </section>
 
-              <!-- 連絡先・住所 -->
-              <div class="section-title">ご連絡先・ご住所</div>
+      <!-- 代理出席者情報 (出席時のみ表示) -->
+      <section class="card" id="proxySection">
+        <h2 class="section-title">
+          同伴者・代理出席者
+          <span class="optional-badge">任意</span>
+        </h2>
 
-              <div class="form-group">
-                <label for="email">メールアドレス<span class="req">*</span></label>
-                <input type="email" id="email" value="${escapeHtml(profile.email || guest.email || '')}" placeholder="example@domain.com">
-                <p class="help-text">※回答の控えをお送りいたします。</p>
-              </div>
+        <!-- 事前定義代理出席者リスト（編集用アコーディオンカードが動的生成されます） -->
+        <div id="predefinedProxyWrapper" class="form-group hidden">
+          <label class="form-label">ご家族・ご同伴者様（ご出欠をご選択の上、必要に応じて詳細を修正してください）</label>
+        </div>
 
-              <div class="form-group">
-                <label for="postalCode">郵便番号<span class="req">*</span></label>
-                <div class="postal-wrapper">
-                  <input type="text" id="postalCode" placeholder="1070062" maxlength="8">
-                  <button type="button" class="btn-secondary" id="lookupAddressBtn">住所自動入力</button>
-                </div>
-                <p class="help-text">※ハイフンなし7桁で自動補完されます。</p>
-              </div>
+        <div id="predefinedProxyContainer" class="accordion-list">
+          <!-- チェックボックス一体型編集カードが動的に挿入されます -->
+        </div>
 
-              <div class="form-group">
-                <label for="address">ご住所<span class="req">*</span></label>
-                <input type="text" id="address" placeholder="東京都港区南青山2-22-16">
-              </div>
+        <!-- 同伴者様追加ボタン -->
+        <div class="add-proxy-wrapper">
+          <button type="button" id="btnAddProxy" class="btn-secondary btn-add-proxy">
+            <span>＋ 同伴者様を追加する</span>
+          </button>
+        </div>
+      </section>
 
-              <div class="form-group">
-                <label for="building">建物名・部屋番号<span class="opt">(任意)</span></label>
-                <input type="text" id="building" placeholder="青山ビル 3F">
-              </div>
+      <!-- お祝いメッセージ -->
+      <section class="card" id="messageSection">
+        <h2 class="section-title">
+          メッセージ
+          <span class="optional-badge">任意</span>
+        </h2>
+        <div class="form-group">
+          <label class="form-label" for="message">新郎新婦へのお祝いメッセージやご質問がございましたらご記入ください</label>
+          <textarea id="message" name="message" placeholder="ご結婚おめでとうございます！当日を楽しみにしております。"></textarea>
+        </div>
+      </section>
 
-              <div class="form-group">
-                <label for="phone">電話番号<span class="req">*</span></label>
-                <input type="tel" id="phone" value="${escapeHtml(profile.phone || guest.phone || '')}" placeholder="09012345678">
-              </div>
+      <!-- 送信確認ボタン -->
+      <div class="submit-container">
+        <button type="button" id="btnConfirm" class="btn-primary">入力内容を確認する</button>
+      </div>
 
-              <!-- アレルギー・食事制限 -->
-              <div class="section-title">アレルギー・食事制限</div>
+    </form>
 
-              <div class="form-group">
-                <label for="allergies">アレルギー・食べられない食材<span class="opt">(任意)</span></label>
-                <textarea id="allergies" placeholder="エビ・カニのアレルギーがあります。アルコールが不可です、など"></textarea>
-              </div>
+  </main>
 
-              <!-- 代理出席者 -->
-              <div class="section-title">代理出席者</div>
+  <!-- 送信前確認モーダル -->
+  <div id="confirmModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">ご回答内容の確認</h3>
+      </div>
+      <p style="font-size: 0.88rem; color: #666; margin-bottom: 15px; text-align: center;">
+        以下の内容で送信します。よろしければ「送信する」を押してください。
+      </p>
 
-              <div id="predefinedProxiesContainer"></div>
+      <div id="modalSummaryList" class="summary-list">
+        <!-- 動的に回答概要が挿入されます -->
+      </div>
 
-              <div class="form-group">
-                <label for="additionalProxies">追加の代理出席者<span class="opt">(任意)</span></label>
-                <textarea id="additionalProxies" placeholder="事前に登録されている方以外に追加でご出席される方がいる場合は、1行に1名ずつお名前をご入力ください。&#10;（例）&#10;山田 花子&#10;山田 次郎"></textarea>
-                <p class="help-text">※改行区切りでご入力ください。</p>
-              </div>
+      <div class="modal-actions">
+        <button type="button" id="btnModalBack" class="btn-modal-back">修正する</button>
+        <button type="button" id="btnModalSubmit" class="btn-modal-submit">送信する</button>
+      </div>
+    </div>
+  </div>
 
-            </div>
-
-            <!-- メッセージ -->
-            <div class="section-title">メッセージ</div>
-
-            <div class="form-group">
-              <label for="message">新郎新婦へのメッセージ<span class="opt">(任意)</span></label>
-              <textarea id="message" placeholder="お祝いのお言葉やメッセージをご自由にご記入ください。"></textarea>
-            </div>
-
-            <button type="submit" class="submit-btn" id="submitBtn">回答を送信する</button>
-
-            <div class="status-msg" id="statusMsg"></div>
-          </form>
-        `;
-
-        // 代理出席者の初期描画 (管理者事前定義)
-        renderPredefinedProxies(predefinedProxies);
-
-        // イベントバインド
-        bindFormEvents();
-      }
-
-      function renderPredefinedProxies(list) {
-        const container = document.getElementById('predefinedProxiesContainer');
-        if (!container) return;
-
-        if (!list || list.length === 0) {
-          container.innerHTML = '';
-          return;
-        }
-
-        let html = '<p class="help-text" style="margin-bottom: 12px;">事前に登録されているご家族・ご同伴者様の情報をご確認ください。</p>';
-
-        list.forEach((p, idx) => {
-          const proxyId = p.proxyId || ('proxy_' + idx);
-          html += `
-            <div class="proxy-card" data-proxy-id="${escapeHtml(proxyId)}">
-              <div class="proxy-card-header">代理出席者 ${idx + 1}: ${escapeHtml(p.lastName || '')} ${escapeHtml(p.firstName || '')}</div>
-
-              <div class="form-group grid-2">
-                <div>
-                  <label>姓</label>
-                  <input type="text" class="px-lastName" value="${escapeHtml(p.lastName || '')}">
-                </div>
-                <div>
-                  <label>名</label>
-                  <input type="text" class="px-firstName" value="${escapeHtml(p.firstName || '')}">
-                </div>
-              </div>
-
-              <div class="form-group grid-2">
-                <div>
-                  <label>せい (よみがな)</label>
-                  <input type="text" class="px-lastNameKana" value="${escapeHtml(p.lastNameKana || '')}">
-                </div>
-                <div>
-                  <label>めい (よみがな)</label>
-                  <input type="text" class="px-firstNameKana" value="${escapeHtml(p.firstNameKana || '')}">
-                </div>
-              </div>
-
-              <div class="form-group grid-2">
-                <div>
-                  <label>年齢区分</label>
-                  <select class="px-ageCategory">
-                    <option value="大人" ${p.ageCategory === '大人' ? 'selected' : ''}>大人</option>
-                    <option value="子供" ${p.ageCategory === '子供' ? 'selected' : ''}>子供</option>
-                    <option value="幼児" ${p.ageCategory === '幼児' ? 'selected' : ''}>幼児</option>
-                  </select>
-                </div>
-                <div>
-                  <label>アレルギー・食事制限</label>
-                  <input type="text" class="px-allergies" value="${escapeHtml(p.allergies || '')}" placeholder="アレルギー等あれば入力">
-                </div>
-              </div>
-            </div>
-          `;
-        });
-
-        container.innerHTML = html;
-      }
-
-      function bindFormEvents() {
-        const form = document.getElementById('weddingForm');
-        const attendingRadio = document.getElementById('attending');
-        const absentRadio = document.getElementById('absent');
-        const detailsArea = document.getElementById('attendanceDetails');
-        const postalInput = document.getElementById('postalCode');
-        const lookupBtn = document.getElementById('lookupAddressBtn');
-        const submitBtn = document.getElementById('submitBtn');
-        const statusMsg = document.getElementById('statusMsg');
-
-        // 出欠切替時の表示コントロール
-        function updateAttendanceView() {
-          const isAttending = attendingRadio.checked;
-          detailsArea.classList.toggle('hidden', !isAttending);
-
-          // 必須属性の切り替え
-          const reqFields = [
-            'lastName', 'firstName', 'lastNameKana', 'firstNameKana',
-            'side', 'ageCategory', 'email', 'postalCode', 'address', 'phone'
-          ];
-
-          reqFields.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-              if (isAttending) {
-                el.setAttribute('required', 'required');
-              } else {
-                el.removeAttribute('required');
-              }
-            }
-          });
-        }
-
-        attendingRadio.addEventListener('change', updateAttendanceView);
-        absentRadio.addEventListener('change', updateAttendanceView);
-
-        // 郵便番号自動住所補完
-        function fetchAddress() {
-          const zip = (postalInput.value || '').replace(/[^0-9]/g, '');
-          if (zip.length !== 7) {
-            alert('7桁の郵便番号を入力してください（ハイフン不要）。');
-            return;
-          }
-
-          lookupBtn.disabled = true;
-          lookupBtn.textContent = '検索中...';
-
-          fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`)
-            .then(res => res.json())
-            .then(data => {
-              if (data && data.results && data.results[0]) {
-                const r = data.results[0];
-                const fullAddress = r.address1 + r.address2 + r.address3;
-                document.getElementById('address').value = fullAddress;
-              } else {
-                alert('該当する住所が見つかりませんでした。');
-              }
-            })
-            .catch(() => {
-              alert('住所情報の取得に失敗しました。直接ご住所をご入力ください。');
-            })
-            .finally(() => {
-              lookupBtn.disabled = false;
-              lookupBtn.textContent = '住所自動入力';
-            });
-        }
-
-        lookupBtn.addEventListener('click', fetchAddress);
-        postalInput.addEventListener('input', function () {
-          const cleanVal = postalInput.value.replace(/[^0-9]/g, '');
-          if (cleanVal.length === 7) {
-            fetchAddress();
-          }
-        });
-
-        // フォーム送信処理 (iframe postMessage 連携)
-        let isSubmitting = false;
-
-        window.addEventListener('message', function (event) {
-          if (!isSubmitting) return;
-
-          let data = event.data;
-          if (typeof data === 'string') {
-            try { data = JSON.parse(data); } catch (e) {}
-          }
-
-          if (data && data.type === 'wedding-response') {
-            isSubmitting = false;
-            submitBtn.disabled = false;
-            submitBtn.textContent = '回答を送信する';
-
-            if (data.result && data.result.ok) {
-              showCompleteView();
-            } else {
-              const errMsg = (data.result && data.result.message) || '送信エラーが発生しました。';
-              statusMsg.textContent = errMsg;
-              statusMsg.className = 'status-msg error';
-            }
-          }
-        });
-
-        form.addEventListener('submit', function (e) {
-          statusMsg.textContent = '';
-          statusMsg.className = 'status-msg';
-
-          const attendance = attendingRadio.checked ? '出席' : (absentRadio.checked ? '欠席' : '');
-          if (!attendance) {
-            e.preventDefault();
-            alert('ご出欠を選択してください。');
-            return;
-          }
-
-          // 事前定義代理出席者の収集
-          const predefinedResponses = [];
-          document.querySelectorAll('.proxy-card').forEach(card => {
-            const getVal = cls => card.querySelector('.' + cls)?.value || '';
-            predefinedResponses.push({
-              proxyId: card.getAttribute('data-proxy-id'),
-              lastName: getVal('px-lastName'),
-              firstName: getVal('px-firstName'),
-              lastNameKana: getVal('px-lastNameKana'),
-              firstNameKana: getVal('px-firstNameKana'),
-              ageCategory: getVal('px-ageCategory'),
-              allergies: getVal('px-allergies')
-            });
-          });
-
-          const getValue = id => document.getElementById(id)?.value || '';
-
-          const payload = {
-            token: token,
-            attendance: attendance,
-            message: getValue('message')
-          };
-
-          if (attendance === '出席') {
-            payload.profile = {
-              lastName: getValue('lastName'),
-              firstName: getValue('firstName'),
-              lastNameKana: getValue('lastNameKana'),
-              firstNameKana: getValue('firstNameKana'),
-              side: getValue('side'),
-              ageCategory: getValue('ageCategory'),
-              email: getValue('email'),
-              postalCode: getValue('postalCode'),
-              address: getValue('address'),
-              building: getValue('building'),
-              phone: getValue('phone'),
-              allergies: getValue('allergies')
-            };
-            payload.predefinedProxiesResponse = predefinedResponses;
-            payload.additionalProxies = getValue('additionalProxies');
-          }
-
-          document.getElementById('payloadInput').value = JSON.stringify(payload);
-
-          isSubmitting = true;
-          submitBtn.disabled = true;
-          submitBtn.textContent = '送信中...';
-          statusMsg.textContent = 'ご回答を送信しております...';
-
-          // タイムアウトセーフティ (15秒応答がなかった場合のフォールバック)
-          setTimeout(() => {
-            if (isSubmitting) {
-              isSubmitting = false;
-              submitBtn.disabled = false;
-              submitBtn.textContent = '回答を送信する';
-              statusMsg.textContent = '送信受付を完了いたしました。確認メールが届いているかご確認ください。';
-              statusMsg.className = 'status-msg success';
-              setTimeout(() => showCompleteView(), 2000);
-            }
-          }, 15000);
-        });
-      }
-
-      function showCompleteView() {
-        app.innerHTML = `
-          <div class="complete-screen">
-            <div class="complete-icon">✉</div>
-            <h2 style="color: var(--primary); margin-bottom: 12px;">ご回答ありがとうございました</h2>
-            <p style="margin-bottom: 20px;">ご出欠の回答を正常に受け付けいたしました。<br>ご入力いただきましたメールアドレス宛に確認メールをお送りしております。</p>
-            <p class="help-text">※メールが届かない場合は、迷惑メールフォルダをご確認いただくか、新郎新婦まで直接ご連絡ください。</p>
-          </div>
-        `;
-      }
-
-      function escapeHtml(str) {
-        if (!str) return '';
-        return String(str)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
-      }
-    })();
-  </script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

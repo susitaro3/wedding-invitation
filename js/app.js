@@ -41,7 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalSummaryList = document.getElementById("modalSummaryList");
   const btnModalBack = document.getElementById("btnModalBack");
   const btnModalSubmit = document.getElementById("btnModalSubmit");
-  const btnAddProxy = document.getElementById("btnAddProxy");
 
   let currentToken = "";
   let guestData = null;
@@ -79,11 +78,6 @@ document.addEventListener("DOMContentLoaded", () => {
   addressInput.addEventListener("input", syncAddressesToSameAddressProxies);
   buildingInput.addEventListener("input", syncAddressesToSameAddressProxies);
   phoneInput.addEventListener("input", syncAddressesToSameAddressProxies);
-
-  // 同伴者様追加ボタン
-  if (btnAddProxy) {
-    btnAddProxy.addEventListener("click", handleAddDynamicProxy);
-  }
 
   // 送信内容確認ボタン
   btnConfirm.addEventListener("click", handleConfirmClick);
@@ -333,39 +327,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 同伴者様の動的追加処理 (一意なProxyIdの自動採番)
-   */
-  function handleAddDynamicProxy() {
-    // 一意なProxyIdを自動生成 (タイムスタンプ + 乱数)
-    const uniqueProxyId = "proxy_dyn_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
-
-    const newProxyObj = {
-      proxyId: uniqueProxyId,
-      token: currentToken,
-      lastName: "",
-      firstName: "",
-      kanaLastName: "",
-      kanaFirstName: "",
-      side: (guestData && guestData.side) ? guestData.side : "新郎側",
-      ageCategory: "大人",
-      status: "出席",
-      allergies: "",
-      sameAddress: true
-    };
-
-    const card = renderPredefinedProxyAccordionCard(newProxyObj);
-    predefinedProxyWrapper.classList.remove("hidden");
-
-    if (card) {
-      card.classList.add("open");
-      const lastNameIn = card.querySelector(".proxy-last-name");
-      if (lastNameIn) {
-        lastNameIn.focus();
-      }
-    }
-  }
-
-  /**
    * フォームへのデータ反映・初期描画
    */
   function populateForm(guest, proxies, existingResp) {
@@ -444,7 +405,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 事前定義および新規動的代理出席者の編集用アコーディオンカード描画関数
+   * 事前定義代理出席者の編集用アコーディオンカード描画関数
+   * (初期表示は閉じた状態＝"accordion-card")
    */
   function renderPredefinedProxyAccordionCard(proxy) {
     const isInitiallyAttending = proxy.status !== "欠席";
@@ -461,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="accordion-header">
         <div class="accordion-title-group">
           <input type="checkbox" class="accordion-checkbox proxy-attend-cb" id="cb_${proxy.proxyId}" ${isInitiallyAttending ? "checked" : ""}>
-          <span class="accordion-title">${escapeHtml(proxyName || "新規同伴者様")}（${escapeHtml(ageCategory)}）</span>
+          <span class="accordion-title">${escapeHtml(proxyName)} 様（${escapeHtml(ageCategory)}）</span>
           <span class="accordion-badge">タップして詳細を修正</span>
         </div>
         <span class="accordion-toggle-icon">▼</span>
@@ -526,11 +488,6 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
         </div>
-
-        <!-- 同伴者様の削除ボタン -->
-        <div class="accordion-actions">
-          <button type="button" class="btn-delete-proxy">この同伴者様を削除</button>
-        </div>
       </div>
     `;
 
@@ -543,7 +500,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const ageSelect = card.querySelector(".proxy-age-category");
     const sameAddressCb = card.querySelector(".proxy-same-address-cb");
     const customAddressBox = card.querySelector(".proxy-custom-address-box");
-    const deleteBtn = card.querySelector(".btn-delete-proxy");
 
     // ヘッダータイトル更新
     const updateTitle = () => {
@@ -561,21 +517,6 @@ document.addEventListener("DOMContentLoaded", () => {
         card.style.opacity = "0.7";
       }
     };
-
-    // 削除ボタンイベント
-    if (deleteBtn) {
-      deleteBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const displayName = (lastNameIn.value.trim() || firstNameIn.value.trim()) ? `${lastNameIn.value.trim()} ${firstNameIn.value.trim()}`.trim() : "同伴者様";
-        if (confirm(`${displayName} を削除してもよろしいですか？`)) {
-          card.remove();
-          const remainingCards = predefinedProxyContainer.querySelectorAll(".accordion-card");
-          if (remainingCards.length === 0) {
-            predefinedProxyWrapper.classList.add("hidden");
-          }
-        }
-      });
-    }
 
     // 主出席者と同じ住所トグルイベント
     sameAddressCb.addEventListener("change", (e) => {
@@ -623,7 +564,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateTitle();
     predefinedProxyContainer.appendChild(card);
-    return card;
   }
 
   /**

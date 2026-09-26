@@ -392,6 +392,29 @@ body {
   box-sizing: border-box;
 }
 
+/* --------------------------------------------------------------------------
+   回答完了時専用お礼画像 (ending.jpg)
+   -------------------------------------------------------------------------- */
+.hero-ending-frame {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto 30px auto;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(197, 160, 89, 0.18);
+  animation: noticeFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hero-ending-img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 460px;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
 .hero-slider {
   position: relative;
   width: 100%;
