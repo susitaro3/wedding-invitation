@@ -378,18 +378,17 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   ヒーローフォトフレーム & アニメーションスライドショー
+   ヒーローフォトギャラリー & アニメーションスライドショー (フレームなし)
    -------------------------------------------------------------------------- */
 .hero-photo-frame {
   position: relative;
   width: 100%;
   max-width: 620px;
   margin: 0 auto 30px auto;
-  padding: 8px;
-  background-color: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: 0 10px 28px rgba(197, 160, 89, 0.2);
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
   box-sizing: border-box;
 }
 
@@ -399,7 +398,7 @@ body {
   aspect-ratio: 4 / 3;
   max-height: 460px;
   overflow: hidden;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background-color: #f7f5f0;
 }
 
