@@ -1,86 +1,93 @@
-# 結婚式Web招待状システム (GitHub Pages + Googleスプレッドシート連携)
+# 結婚式 Web 招待状システム (GitHub Pages + Google Apps Script + Google スプレッドシート)
 
-GitHub Pages上で動作する、エレガントでレスポンシブな結婚式Web招待状システムです。  
-GoogleスプレッドシートおよびGoogle Apps Script (GAS) をバックエンドとして使用し、招待客ごとにユニークなトークン（URLパラメータ）でゲスト情報（お名前、事前に登録したご家族・代理出席者等）を自動読み込み・初期表示します。
+GitHub Pages（フロントエンド）と Google Apps Script（バックエンド ＋ Google スプレッドシート DB）を組み合わせた結婚式 Web 招待状アプリです。
 
----
-
-## 🌟 特長・機能
-
-- **トークン識別 & 画面描画時データ自動取得**:
-  - URLの `?token=XXX` パラメータから個別のゲスト情報をGoogleスプレッドシートより取得。
-  - お名前（姓・名）、ふりがな、新郎側/新婦側区分、年齢区分が自動表示されます。
-- **事前定義代理出席者（PredefinedProxies）の独立テーブル化**:
-  - 招待主以外の事前定義ご家族・代理出席者は、専用の `PredefinedProxies` シートで管理。
-  - トークンに紐づく同伴者様のお名前・年齢区分が画面上にダイナミックに一覧表示され、出欠チェックを選択できます。
-- **出欠に応じた表示切り替え**:
-  - 「ご出席」を選択した場合：連絡先、住所、アレルギー、同伴者入力欄を表示。
-  - 「ご欠席」を選択した場合：住所・アレルギー等の詳細欄を自動で非表示化（お名前とメッセージのみ保持）。
-- **郵便番号住所自動入力**:
-  - zipcloud API連携により、郵便番号入力（7桁）からワンタップで住所を自動補完（完全無料）。
-- **送信前確認モーダル**:
-  - 送信間違いを防止するエレガントな確認モーダル表示。
-- **完全無料・サーバーレス**:
-  - ホスティングは GitHub Pages、データベースは Google スプレッドシートを使用するため維持費が無料です。
+## 特徴
+- **URLトークン照合**: URLパラメータ (`?id=TOKEN` または `?token=TOKEN`) をGAS上の `Guests` シートと照合してゲストを特定。
+- **動的フォーム**:
+  - 「出席」選択時: ゲスト情報、連絡先・住所、アレルギー、代理出席者フォームを表示。
+  - 「欠席」選択時: ゲスト情報・代理出席者を自動非表示にし、メッセージ（任意）のみ表示。
+- **郵便番号住所自動入力**: 7桁の郵便番号を入力すると、住所（都道府県・市区町村・町域）を自動補完。
+- **代理出席者対応**:
+  - 管理者側で `PredefinedProxies` シート（事前定義代理出席者）に登録されたご家族・同伴者情報を表示・確認。
+  - 入力者（ゲスト）が追加で同伴者を登録できる「追加の代理出席者」入力テキストエリア（改行区切りで入力）を設置。
+- **メール自動通知**: ゲスト回答受付時の自動確認メール ＋ 主催者（新郎新婦）への通知メール機能。
 
 ---
 
-## 📁 ディレクトリ構造
+## 1. Google スプレッドシート ＆ Apps Script の設定
 
-```text
-結婚新規招待状v2/
-├── index.html        # メインWebページ（ヒーローセクション、フォーム、モーダル等）
-├── css/
-│   └── style.css     # レスポンシブスタイリング（結婚式向けエレガントテーマ）
-├── js/
-│   ├── config.js     # 基本設定（GAS Web App URL、新郎新婦名、挙式日時・場所等）
-│   └── app.js        # メインアプリケーションロジック（API連携、自動補完、フォーム制御）
-├── gas/
-│   ├── Code.gs       # Google Apps Script コード（doGet / doPost API）
-│   └── README.md     # スプレッドシート作成・GASデプロイ詳細ガイド（3シート構成）
-└── README.md         # 本ファイル（全体運用・GitHub Pages公開手順ガイド）
-```
+1. 新しい Google スプレッドシートを作成し、メニューの **拡張機能 → Apps Script** を開きます。
+2. スクリプトエディタに `Code.gs` と `appsscript.json` の内容を貼り付けて保存します。
+3. エディタ上部の関数選択ドロップダウンで **`setup`** を選択し、**実行** ボタンをクリックします。初回実行時にアクセス権限の承認ポップアップが表示されるので「許可」します。
+   - スプレッドシートに `Guests`, `PredefinedProxies`, `Responses`, `Logs` シートが自動生成されます。
+
+### シートの設定方法
+
+#### ① `Guests` シート（招待客マスター）
+ゲストごとの個別識別用 `Token` を設定します。
+
+| Token | LastName | FirstName | LastNameKana | FirstNameKana | Email | Phone | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 8dQpK2zL7m | 山田 | 太郎 | やまだ | たろう | taro@example.com | 09012345678 | ご家族招待 |
+
+- `Token` は各ゲスト専用のユニークで推測されにくい英数字文字列を設定してください。
+
+#### ② `PredefinedProxies` シート（事前定義 代理出席者マスター）
+管理者側であらかじめトークンごとに紐づける家族・同伴者を登録しておきます。
+
+| Token | ProxyId | LastName | FirstName | LastNameKana | FirstNameKana | Side | AgeCategory | Allergies | Note |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 8dQpK2zL7m | px_01 | 山田 | 花子 | やまだ | はなこ | 新郎側 | 大人 | なし | |
+| 8dQpK2zL7m | px_02 | 山田 | 次郎 | やまだ | じろう | 新郎側 | 子供 | 卵アレルギー | |
 
 ---
 
-## 🚀 セットアップ・デプロイ手順
+## 2. Web アプリとしてデプロイ
 
-### STEP 1: Googleスプレッドシート & GASのデプロイ
-1. Googleスプレッドシートを作成し、`Tokens` シート、`PredefinedProxies` シート、`Responses` シートの3つを用意します。
-2. `gas/Code.gs` をApps Scriptエディタにコピー＆ペーストし、ウェブアプリとして全員（Anyone）アクセス権でデプロイします。
-3. 詳細なスプレッドシートの列名やGASデプロイ手順は **[`gas/README.md`](gas/README.md)** をご覧ください。
+1. Apps Script エディタ右上の **デプロイ → 新しいデプロイ** をクリックします。
+2. 種類を選択で **ウェブアプリ** を選択します。
+   - **説明**: v2.0.0 など
+   - **次のユーザーとして実行**: **自分**
+   - **アクセスできるユーザー**: **全員** （※「自分のみ」にするとエラーが発生します）
+3. **デプロイ** ボタンを押し、発行された **`/exec` で終わる Web App URL** をコピーします。
 
-### STEP 2: `js/config.js` の編集
-`js/config.js` を開き、GASデプロイ時に発行された **ウェブアプリURL** および式情報を設定します。
+※スクリプトを更新した際は、毎回 **デプロイの管理 → 編集（鉛筆マーク） → バージョン: 「新しいバージョン」** を選択して再デプロイしてください。
+
+---
+
+## 3. GitHub Pages の設定
+
+1. GitHub にリポジトリを作成し、`index.html` と `config.js` を設置します。
+2. `config.js` を開き、先ほどコピーした Web App URL を `apiUrl` に設定します。
 
 ```javascript
-const CONFIG = {
-  GAS_WEB_APP_URL: "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec",
-  GROOM_NAME: "新郎 太郎",
-  BRIDE_NAME: "新婦 花子",
-  WEDDING_DATE: "2026年10月10日（土）",
-  RECEPTION_TIME: "開場 11:30 / 挙式 12:00 / 披露宴 13:00",
-  VENUE_NAME: "グランドホテル東京 鳳凰の間",
-  VENUE_ADDRESS: "東京都千代田区1-1-1",
-  RESPONSE_DEADLINE: "2026年9月1日（火）"
+window.WEDDING_CONFIG = {
+  apiUrl: 'https://script.google.com/macros/s/AKfycb.../exec',
+  groom: '小泉竜馬',
+  bride: '大西美保夏',
+  eventDate: '2027年2月11日（木・祝）',
+  venue: 'カサ・デ・アンジェラ青山',
+  replyDeadline: '2026年12月31日'
 };
 ```
 
-### STEP 3: GitHub Pages への公開
-1. 本リポジトリのコードを GitHub の新規リポジトリにプッシュします。
-2. GitHub リポジトリの **Settings > Pages** を開きます。
-3. **Build and deployment** の Source に `Deploy from a branch` を選択します。
-4. Branch に `main` (または `master`) / `/ (root)` を選択して **Save** します。
-5. 数分後、`https://<your-github-username>.github.io/<repository-name>/` のURLで公開されます。
+3. GitHub の **Settings → Pages** で `Deploy from a branch` / `main (root)` を指定して保存します。
 
 ---
 
-## 💌 各招待客への招待状URL配布方法
+## 4. ゲストへの案内URL送信
 
-Googleスプレッドシートの `Tokens` シートのA列に登録したトークン文字列（例: `guest-yamada`）を使用し、以下のようなURLを作成してLINEやメールで案内します：
+作成された GitHub Pages の URL に、`Guests` シートで設定した `Token` をパラメータとして付与して案内します。
 
-```text
-https://<your-github-username>.github.io/<repository-name>/?token=guest-yamada
-```
+例:
+`https://<ユーザー名>.github.io/<リポジトリ名>/?id=8dQpK2zL7m`
 
-招待客がこのURLを開くと、自動的に該当する招待客とそのご家族（`PredefinedProxies` シートに登録された代理出席者データ）がセットされた状態で招待状画面が表示されます。
+---
+
+## トラブルシューティング（通信エラーが発生する場合）
+
+1. **「サーバーとの通信中にエラーが発生いたしました」または接続失敗エラー**
+   - **確認1**: `config.js` の `apiUrl` が正しい `/exec` URL になっているか確認してください（`/dev` URLは使用できません）。
+   - **確認2**: Apps Script のデプロイ設定で、**アクセスできるユーザー** が **「全員」** になっているか確認してください。
+   - **確認3**: `Code.gs` を変更した場合は、「新しいバージョン」としてデプロイし直されているか確認してください。
