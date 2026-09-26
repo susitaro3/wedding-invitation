@@ -714,6 +714,43 @@ function updatePredefinedProxiesSheet(ss, token, proxiesResponse, mainPayload) {
         if (proxyMap['building'] && item.building !== undefined) proxySheet.getRange(targetRowNum, proxyMap['building']).setValue(item.building);
         if (proxyMap['phone'] && item.phone !== undefined) proxySheet.getRange(targetRowNum, proxyMap['phone']).setValue(item.phone);
       }
+    } else {
+      // 🚀 新規追加の同伴者様の場合は PredefinedProxies シートへ行追加！
+      var maxCol = proxySheet.getLastColumn() || 16;
+      var newProxyRow = [];
+      for (var c = 0; c < maxCol; c++) {
+        newProxyRow.push('');
+      }
+
+      var genProxyId = targetProxyId || ('proxy_dyn_' + Date.now() + '_' + i);
+
+      if (proxyMap['proxyid']) newProxyRow[proxyMap['proxyid'] - 1] = genProxyId;
+      if (proxyMap['token']) newProxyRow[proxyMap['token'] - 1] = token;
+      if (proxyMap['lastname']) newProxyRow[proxyMap['lastname'] - 1] = item.lastName || '';
+      if (proxyMap['firstname']) newProxyRow[proxyMap['firstname'] - 1] = item.firstName || '';
+      if (proxyMap['kanalastname']) newProxyRow[proxyMap['kanalastname'] - 1] = item.kanaLastName || '';
+      if (proxyMap['kanafirstname']) newProxyRow[proxyMap['kanafirstname'] - 1] = item.kanaFirstName || '';
+      if (proxyMap['side']) newProxyRow[proxyMap['side'] - 1] = mainPayload ? (mainPayload.side || '新郎側') : '新郎側';
+      if (proxyMap['agecategory']) newProxyRow[proxyMap['agecategory'] - 1] = item.ageCategory || '大人';
+      if (proxyMap['status']) newProxyRow[proxyMap['status'] - 1] = item.attending ? '出席' : '欠席';
+      if (proxyMap['allergies']) newProxyRow[proxyMap['allergies'] - 1] = item.allergies || '';
+
+      var isSameNew = item.sameAddress !== false;
+      if (proxyMap['sameaddress']) newProxyRow[proxyMap['sameaddress'] - 1] = isSameNew ? 'はい' : 'いいえ';
+
+      if (isSameNew && mainPayload) {
+        if (proxyMap['postalcode']) newProxyRow[proxyMap['postalcode'] - 1] = mainPayload.postalCode || '';
+        if (proxyMap['address']) newProxyRow[proxyMap['address'] - 1] = mainPayload.address || '';
+        if (proxyMap['building']) newProxyRow[proxyMap['building'] - 1] = mainPayload.building || '';
+        if (proxyMap['phone']) newProxyRow[proxyMap['phone'] - 1] = mainPayload.phone || '';
+      } else {
+        if (proxyMap['postalcode']) newProxyRow[proxyMap['postalcode'] - 1] = item.postalCode || '';
+        if (proxyMap['address']) newProxyRow[proxyMap['address'] - 1] = item.address || '';
+        if (proxyMap['building']) newProxyRow[proxyMap['building'] - 1] = item.building || '';
+        if (proxyMap['phone']) newProxyRow[proxyMap['phone'] - 1] = item.phone || '';
+      }
+
+      proxySheet.appendRow(newProxyRow);
     }
   }
 }
