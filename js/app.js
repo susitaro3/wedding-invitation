@@ -2,6 +2,21 @@
  * 結婚式Web招待状 メインアプリケーションロジック
  */
 
+// ⚡ 【超高速化】DOMContentLoadedイベントを待たず、スクリプト読み込み直後にバックグラウンドでデータ通信を並行スタート！
+const initialToken = (
+  new URLSearchParams(window.location.search).get("token") ||
+  (window.location.hash ? new URLSearchParams(window.location.hash.substring(1)).get("token") : "") ||
+  ""
+).trim();
+
+let earlyFetchPromise = null;
+if (initialToken && typeof CONFIG !== "undefined" && CONFIG.GAS_WEB_APP_URL && !CONFIG.GAS_WEB_APP_URL.includes("YOUR_GAS_WEB_APP_URL")) {
+  const earlyUrl = `${CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(initialToken)}`;
+  earlyFetchPromise = fetch(earlyUrl)
+    .then((res) => (res.ok ? res.json() : null))
+    .catch((err) => null);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   // DOM Elements
   const loadingContainer = document.getElementById("loadingContainer");
@@ -11,6 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const submittedSummaryBox = document.getElementById("submittedSummaryBox");
   const rsvpForm = document.getElementById("rsvpForm");
   const heroSuccessNotice = document.getElementById("heroSuccessNotice");
+  const heroPhotoFrame = document.getElementById("heroPhotoFrame");
+  const heroEndingFrame = document.getElementById("heroEndingFrame");
 
   // Sections
   const guestInfoSection = document.getElementById("guestInfoSection");
@@ -41,6 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalSummaryList = document.getElementById("modalSummaryList");
   const btnModalBack = document.getElementById("btnModalBack");
   const btnModalSubmit = document.getElementById("btnModalSubmit");
+  const btnAddProxy = document.getElementById("btnAddProxy");
 
   let currentToken = "";
   let guestData = null;
@@ -52,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initHeroSlider();
 
   // 2. URLパラメータからトークンを取得
-  currentToken = getTokenFromURL();
+  currentToken = initialToken || getTokenFromURL();
 
   if (!currentToken) {
     showError("招待状URLにトークンが含まれていません。お送りしたURLを再度ご確認ください。");
@@ -78,6 +96,11 @@ document.addEventListener("DOMContentLoaded", () => {
   addressInput.addEventListener("input", syncAddressesToSameAddressProxies);
   buildingInput.addEventListener("input", syncAddressesToSameAddressProxies);
   phoneInput.addEventListener("input", syncAddressesToSameAddressProxies);
+
+  // 同伴者様追加ボタン
+  if (btnAddProxy) {
+    btnAddProxy.addEventListener("click", handleAddDynamicProxy);
+  }
 
   // 送信内容確認ボタン
   btnConfirm.addEventListener("click", handleConfirmClick);
@@ -157,6 +180,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const deadlineElem = document.getElementById("responseDeadlineDisplay");
       if (deadlineElem) deadlineElem.textContent = `${CONFIG.RESPONSE_DEADLINE} まで`;
     }
+  }
+
+  /**
+   * 回答完了時の画面表示切り替え（スライドショーを隠し、ending.jpgおよび完了通知メッセージを表示）
+   */
+  function switchToCompletedState() {
+    if (heroSuccessNotice) heroSuccessNotice.classList.remove("hidden");
+    if (heroPhotoFrame) heroPhotoFrame.classList.add("hidden");
+    if (heroEndingFrame) heroEndingFrame.classList.remove("hidden");
   }
 
   /**
@@ -274,7 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * GAS APIよりデータ取得 (fetch & JSONPフォールバック)
+   * GAS APIよりデータ取得 (並行通信Promise / fetch & JSONPフォールバック)
    */
   async function fetchGuestData(token) {
     if (!CONFIG || !CONFIG.GAS_WEB_APP_URL || CONFIG.GAS_WEB_APP_URL.includes("YOUR_GAS_WEB_APP_URL")) {
@@ -282,23 +314,34 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const baseUrl = `${CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(token)}`;
     let result = null;
 
-    // 1. まず標準 fetch を試行
-    try {
-      const response = await fetch(baseUrl);
-      if (response.ok) {
-        result = await response.json();
+    // 1. ⚡ スクリプト読み込み直後にバックグラウンドで開始された早割り通信Promise結果を優先活用！
+    if (earlyFetchPromise) {
+      try {
+        result = await earlyFetchPromise;
+      } catch (e) {
+        result = null;
       }
-    } catch (e) {
-      console.warn("Standard fetch failed (CORS block), trying JSONP fallback...", e);
     }
 
-    // 2. fetchでCORS等失敗した場合は JSONP でフォールバック試行
+    // 2. 早割り通信で取得できなかった場合は標準 fetch を試行
+    if (!result) {
+      const baseUrl = `${CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(token)}`;
+      try {
+        const response = await fetch(baseUrl);
+        if (response.ok) {
+          result = await response.json();
+        }
+      } catch (e) {
+        console.warn("Standard fetch failed (CORS block), trying JSONP fallback...", e);
+      }
+    }
+
+    // 3. それでも取得できない場合は JSONP でフォールバック試行
     if (!result) {
       try {
-        result = await fetchJSONP(baseUrl);
+        result = await fetchJSONP(`${CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(token)}`);
       } catch (jsonpErr) {
         console.error("JSONP fetch error:", jsonpErr);
         showError(
@@ -324,6 +367,39 @@ document.addEventListener("DOMContentLoaded", () => {
     // 画面表示切り替え
     loadingContainer.classList.add("hidden");
     rsvpForm.classList.remove("hidden");
+  }
+
+  /**
+   * 同伴者様の動的追加処理 (一意なProxyIdの自動採番)
+   */
+  function handleAddDynamicProxy() {
+    // 一意なProxyIdを自動生成 (タイムスタンプ + 乱数)
+    const uniqueProxyId = "proxy_dyn_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+
+    const newProxyObj = {
+      proxyId: uniqueProxyId,
+      token: currentToken,
+      lastName: "",
+      firstName: "",
+      kanaLastName: "",
+      kanaFirstName: "",
+      side: (guestData && guestData.side) ? guestData.side : "新郎側",
+      ageCategory: "大人",
+      status: "出席",
+      allergies: "",
+      sameAddress: true
+    };
+
+    const card = renderPredefinedProxyAccordionCard(newProxyObj);
+    predefinedProxyWrapper.classList.remove("hidden");
+
+    if (card) {
+      card.classList.add("open");
+      const lastNameIn = card.querySelector(".proxy-last-name");
+      if (lastNameIn) {
+        lastNameIn.focus();
+      }
+    }
   }
 
   /**
@@ -368,8 +444,10 @@ document.addEventListener("DOMContentLoaded", () => {
       predefinedProxyWrapper.classList.add("hidden");
     }
 
-    // もし過去の回答データが存在する場合、入力値を復元
+    // もし過去の回答データが存在する場合、入力値を復元＆回答完了状態（ending.jpg）を表示
     if (existingResp) {
+      switchToCompletedState();
+
       // 出欠
       if (existingResp.attendance) {
         const attendanceRadio = document.querySelector(`input[name="attendance"][value="${existingResp.attendance}"]`);
@@ -405,8 +483,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 事前定義代理出席者の編集用アコーディオンカード描画関数
-   * (初期表示は閉じた状態＝"accordion-card")
+   * 事前定義および新規動的代理出席者の編集用アコーディオンカード描画関数
    */
   function renderPredefinedProxyAccordionCard(proxy) {
     const isInitiallyAttending = proxy.status !== "欠席";
@@ -423,7 +500,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="accordion-header">
         <div class="accordion-title-group">
           <input type="checkbox" class="accordion-checkbox proxy-attend-cb" id="cb_${proxy.proxyId}" ${isInitiallyAttending ? "checked" : ""}>
-          <span class="accordion-title">${escapeHtml(proxyName)} 様（${escapeHtml(ageCategory)}）</span>
+          <span class="accordion-title">${escapeHtml(proxyName || "新規同伴者様")}（${escapeHtml(ageCategory)}）</span>
           <span class="accordion-badge">タップして詳細を修正</span>
         </div>
         <span class="accordion-toggle-icon">▼</span>
@@ -488,6 +565,11 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
         </div>
+
+        <!-- 同伴者様の削除ボタン -->
+        <div class="accordion-actions">
+          <button type="button" class="btn-delete-proxy">この同伴者様を削除</button>
+        </div>
       </div>
     `;
 
@@ -500,6 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const ageSelect = card.querySelector(".proxy-age-category");
     const sameAddressCb = card.querySelector(".proxy-same-address-cb");
     const customAddressBox = card.querySelector(".proxy-custom-address-box");
+    const deleteBtn = card.querySelector(".btn-delete-proxy");
 
     // ヘッダータイトル更新
     const updateTitle = () => {
@@ -517,6 +600,21 @@ document.addEventListener("DOMContentLoaded", () => {
         card.style.opacity = "0.7";
       }
     };
+
+    // 削除ボタンイベント
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const displayName = (lastNameIn.value.trim() || firstNameIn.value.trim()) ? `${lastNameIn.value.trim()} ${firstNameIn.value.trim()}`.trim() : "同伴者様";
+        if (confirm(`${displayName} を削除してもよろしいですか？`)) {
+          card.remove();
+          const remainingCards = predefinedProxyContainer.querySelectorAll(".accordion-card");
+          if (remainingCards.length === 0) {
+            predefinedProxyWrapper.classList.add("hidden");
+          }
+        }
+      });
+    }
 
     // 主出席者と同じ住所トグルイベント
     sameAddressCb.addEventListener("change", (e) => {
@@ -564,6 +662,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateTitle();
     predefinedProxyContainer.appendChild(card);
+    return card;
   }
 
   /**
@@ -939,10 +1038,8 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmModal.classList.remove("active");
         rsvpForm.classList.add("hidden");
 
-        // 🚀 「結婚式のご案内」と「新郎新婦名」の間の完了通知エリアを表示！
-        if (heroSuccessNotice) {
-          heroSuccessNotice.classList.remove("hidden");
-        }
+        // 🚀 回答完了画面切り替え（スライドショーを隠し、ending.jpg表示）
+        switchToCompletedState();
 
         // 完了画面へ切り替え
         submittedSummaryBox.innerHTML = modalSummaryList.innerHTML;
@@ -960,9 +1057,7 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmModal.classList.remove("active");
         rsvpForm.classList.add("hidden");
 
-        if (heroSuccessNotice) {
-          heroSuccessNotice.classList.remove("hidden");
-        }
+        switchToCompletedState();
 
         submittedSummaryBox.innerHTML = modalSummaryList.innerHTML;
         successCard.classList.remove("hidden");
