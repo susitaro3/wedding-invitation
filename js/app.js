@@ -183,6 +183,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
+   * 未回答状態の画面表示（3枚スライドショーを表示し、ending.jpgおよび完了通知を隠す）
+   */
+  function switchToInitialState() {
+    if (heroSuccessNotice) heroSuccessNotice.classList.add("hidden");
+    if (heroPhotoFrame) heroPhotoFrame.classList.remove("hidden");
+    if (heroEndingFrame) heroEndingFrame.classList.add("hidden");
+  }
+
+  /**
    * 回答完了時の画面表示切り替え（スライドショーを隠し、ending.jpgおよび完了通知メッセージを表示）
    */
   function switchToCompletedState() {
@@ -444,17 +453,14 @@ document.addEventListener("DOMContentLoaded", () => {
       predefinedProxyWrapper.classList.add("hidden");
     }
 
-    // もし過去の回答データが存在する場合、入力値を復元＆回答完了状態（ending.jpg）を表示
-    if (existingResp) {
+    // もし過去に回答済み（出欠の登録がある）の場合のみ、回答完了状態（ending.jpg）を表示
+    if (existingResp && existingResp.attendance) {
       switchToCompletedState();
 
-      // 出欠
-      if (existingResp.attendance) {
-        const attendanceRadio = document.querySelector(`input[name="attendance"][value="${existingResp.attendance}"]`);
-        if (attendanceRadio) {
-          attendanceRadio.checked = true;
-          toggleAttendanceSections(existingResp.attendance);
-        }
+      const attendanceRadio = document.querySelector(`input[name="attendance"][value="${existingResp.attendance}"]`);
+      if (attendanceRadio) {
+        attendanceRadio.checked = true;
+        toggleAttendanceSections(existingResp.attendance);
       }
 
       if (existingResp.lastName) lastNameInput.value = existingResp.lastName;
@@ -474,7 +480,8 @@ document.addEventListener("DOMContentLoaded", () => {
         restorePredefinedProxiesResponse(existingResp.predefinedProxiesResponse);
       }
     } else {
-      // デフォルト表示の展開
+      // 未回答時の初期状態: 必ずスライドショーを表示し、ending.jpgを隠す！
+      switchToInitialState();
       toggleAttendanceSections("出席");
     }
 

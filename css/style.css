@@ -22,6 +22,16 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+
+  /* --------------------------------------------------------------------------
+     統一タイポグラフィ スケール (5段階に厳格化)
+     -------------------------------------------------------------------------- */
+  --fz-title: 1.6rem;    /* 大タイトル */
+  --fz-h2: 1.2rem;       /* セクション見出し・お名前・大キャッチ */
+  --fz-body: 0.95rem;    /* 標準本文・フォーム入力・確認値 */
+  --fz-sub: 0.85rem;     /* 式情報ラベル・各種バッジ・サブタイトル */
+  --fz-small: 0.78rem;   /* 注記・マイクロテキスト */
+
   --font-serif: "Shippori Mincho", "Noto Serif JP", "Yu Mincho", YuMincho, serif;
   --font-sans: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -42,6 +52,7 @@ body {
   background-color: var(--bg-color);
   color: var(--text-primary);
   line-height: 1.7;
+  font-size: var(--fz-body);
   -webkit-font-smoothing: antialiased;
   padding-bottom: 60px;
 }
@@ -154,7 +165,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: var(--fz-h2);
   box-shadow: 0 4px 10px rgba(138, 109, 59, 0.4);
   border: 2px solid #ffffff;
   transition: opacity 0.4s ease;
@@ -197,7 +208,7 @@ body {
 
 .opening-sub {
   font-family: var(--font-serif);
-  font-size: 0.8rem;
+  font-size: var(--fz-sub);
   letter-spacing: 0.3em;
   color: var(--primary-color);
   margin-bottom: 8px;
@@ -205,7 +216,7 @@ body {
 
 .opening-title {
   font-family: var(--font-serif);
-  font-size: 1.65rem;
+  font-size: var(--fz-title);
   font-weight: 500;
   letter-spacing: 0.12em;
   color: var(--text-primary);
@@ -214,14 +225,14 @@ body {
 
 .opening-couple {
   font-family: var(--font-serif);
-  font-size: 1.15rem;
+  font-size: var(--fz-h2);
   color: var(--accent-color);
   margin-bottom: 8px;
 }
 
 .opening-date {
   font-family: var(--font-serif);
-  font-size: 0.95rem;
+  font-size: var(--fz-body);
   letter-spacing: 0.18em;
   color: var(--text-muted);
 }
@@ -237,7 +248,7 @@ body {
   border: none;
   border-radius: 30px;
   padding: 15px 36px;
-  font-size: 1.05rem;
+  font-size: var(--fz-body);
   font-weight: 600;
   letter-spacing: 0.15em;
   cursor: pointer;
@@ -249,18 +260,6 @@ body {
 .envelope-container.open .btn-open-envelope {
   opacity: 0;
   pointer-events: none;
-}
-  color: #ffffff;
-  border: none;
-  border-radius: 30px;
-  padding: 14px 32px;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(197, 160, 89, 0.35);
-  animation: pulseButton 2s infinite ease-in-out;
-  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 @keyframes pulseButton {
@@ -275,7 +274,7 @@ body {
 }
 
 .btn-open-invitation .open-arrow {
-  font-size: 0.8rem;
+  font-size: var(--fz-small);
 }
 
 /* --------------------------------------------------------------------------
@@ -291,7 +290,7 @@ body {
 
 .hero-subtitle {
   font-family: var(--font-serif);
-  font-size: 0.9rem;
+  font-size: var(--fz-sub);
   letter-spacing: 0.25em;
   color: var(--primary-color);
   text-transform: uppercase;
@@ -300,7 +299,7 @@ body {
 
 .hero-title {
   font-family: var(--font-serif);
-  font-size: 1.8rem;
+  font-size: var(--fz-title);
   font-weight: 500;
   color: var(--text-primary);
   letter-spacing: 0.15em;
@@ -335,7 +334,7 @@ body {
 .success-badge {
   display: inline-block;
   font-family: var(--font-serif);
-  font-size: 0.82rem;
+  font-size: var(--fz-sub);
   letter-spacing: 0.2em;
   color: var(--primary-color);
   background-color: #fff;
@@ -347,32 +346,21 @@ body {
 
 .hero-success-title {
   font-family: var(--font-serif);
-  font-size: 1.45rem;
+  font-size: var(--fz-h2);
   font-weight: 600;
   color: var(--primary-color);
   margin-bottom: 8px;
 }
 
 .hero-success-subtext {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
-.hero-title {
   font-family: var(--font-serif);
-  font-size: 1.8rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  letter-spacing: 0.15em;
-  margin-bottom: 20px;
+  font-size: var(--fz-body);
+  color: var(--text-muted);
 }
 
 .couple-names {
   font-family: var(--font-serif);
-  font-size: 1.25rem;
+  font-size: var(--fz-h2);
   color: var(--accent-color);
   margin-bottom: 25px;
 }
@@ -488,7 +476,7 @@ body {
 
 .invitation-text {
   font-family: var(--font-serif);
-  font-size: 0.95rem;
+  font-size: var(--fz-body);
   color: var(--text-muted);
   line-height: 2;
   margin-bottom: 30px;
@@ -507,7 +495,7 @@ body {
 .info-item {
   display: flex;
   margin-bottom: 12px;
-  font-size: 0.92rem;
+  font-size: var(--fz-body);
 }
 
 .info-item:last-child {
@@ -515,6 +503,8 @@ body {
 }
 
 .info-label {
+  font-family: var(--font-serif);
+  font-size: var(--fz-sub);
   font-weight: 600;
   min-width: 90px;
   color: var(--primary-color);
@@ -522,6 +512,7 @@ body {
 
 .info-value {
   color: var(--text-primary);
+  font-size: var(--fz-body);
   flex: 1;
 }
 
@@ -539,7 +530,7 @@ body {
 
 .section-title {
   font-family: var(--font-serif);
-  font-size: 1.2rem;
+  font-size: var(--fz-h2);
   font-weight: 600;
   color: var(--primary-color);
   border-bottom: 2px solid var(--secondary-color);
@@ -551,7 +542,7 @@ body {
 }
 
 .required-badge {
-  font-size: 0.72rem;
+  font-size: var(--fz-sub);
   background-color: #f7ece1;
   color: #a86128;
   padding: 2px 8px;
@@ -561,7 +552,7 @@ body {
 }
 
 .optional-badge {
-  font-size: 0.72rem;
+  font-size: var(--fz-sub);
   background-color: #f0f0f0;
   color: #777;
   padding: 2px 8px;
@@ -575,6 +566,7 @@ body {
 .loading-container {
   text-align: center;
   padding: 60px 20px;
+  font-size: var(--fz-body);
 }
 
 .spinner {
@@ -603,7 +595,8 @@ body {
 }
 
 .error-title {
-  font-size: 1.2rem;
+  font-family: var(--font-serif);
+  font-size: var(--fz-h2);
   font-weight: bold;
   margin-bottom: 10px;
 }
@@ -621,14 +614,14 @@ body {
 
 label.form-label {
   display: block;
-  font-size: 0.92rem;
+  font-size: var(--fz-body);
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--text-primary);
 }
 
 .form-subtext {
-  font-size: 0.8rem;
+  font-size: var(--fz-small);
   color: var(--text-light);
   margin-top: 4px;
 }
@@ -649,8 +642,8 @@ textarea,
 select {
   width: 100%;
   padding: 12px 14px;
-  font-size: 0.95rem;
-  font-family: inherit;
+  font-size: var(--fz-body);
+  font-family: var(--font-sans);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background-color: #fff;
@@ -694,7 +687,7 @@ textarea {
   border: none;
   border-radius: var(--radius-sm);
   padding: 0 16px;
-  font-size: 0.85rem;
+  font-size: var(--fz-sub);
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -739,14 +732,15 @@ textarea {
 
 .attendance-btn .btn-title {
   font-family: var(--font-serif);
-  font-size: 1.15rem;
+  font-size: var(--fz-h2);
   font-weight: bold;
   display: block;
   color: var(--text-primary);
 }
 
 .attendance-btn .btn-sub {
-  font-size: 0.75rem;
+  font-family: var(--font-serif);
+  font-size: var(--fz-sub);
   color: var(--text-light);
   margin-top: 4px;
   display: block;
@@ -775,7 +769,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.92rem;
+  font-size: var(--fz-body);
   cursor: pointer;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
@@ -858,13 +852,14 @@ textarea {
 }
 
 .accordion-title {
+  font-family: var(--font-serif);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--fz-body);
   color: var(--text-primary);
 }
 
 .accordion-badge {
-  font-size: 0.75rem;
+  font-size: var(--fz-sub);
   background-color: var(--secondary-color);
   color: var(--accent-color);
   padding: 2px 8px;
@@ -872,7 +867,7 @@ textarea {
 }
 
 .accordion-toggle-icon {
-  font-size: 0.8rem;
+  font-size: var(--fz-sub);
   color: var(--primary-color);
   transition: transform 0.25s ease;
 }
@@ -902,7 +897,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
+  font-size: var(--fz-body);
   font-weight: 600;
   cursor: pointer;
   color: var(--primary-color);
@@ -937,7 +932,7 @@ textarea {
   border: 1px solid #ffc9c9;
   border-radius: var(--radius-sm);
   padding: 6px 14px;
-  font-size: 0.82rem;
+  font-size: var(--fz-sub);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -954,7 +949,7 @@ textarea {
   border: 2px dashed var(--primary-color);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
-  font-size: 0.92rem;
+  font-size: var(--fz-body);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s;
@@ -981,7 +976,7 @@ textarea {
   border: none;
   border-radius: 30px;
   padding: 16px 24px;
-  font-size: 1.05rem;
+  font-size: var(--fz-body);
   font-weight: 600;
   letter-spacing: 0.08em;
   cursor: pointer;
@@ -1049,7 +1044,7 @@ textarea {
 
 .modal-title {
   font-family: var(--font-serif);
-  font-size: 1.25rem;
+  font-size: var(--fz-h2);
   color: var(--primary-color);
 }
 
@@ -1057,7 +1052,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  font-size: 0.9rem;
+  font-size: var(--fz-body);
   margin-bottom: 25px;
 }
 
@@ -1068,6 +1063,8 @@ textarea {
 }
 
 .summary-label {
+  font-family: var(--font-serif);
+  font-size: var(--fz-sub);
   font-weight: 600;
   min-width: 110px;
   color: var(--text-muted);
@@ -1075,6 +1072,7 @@ textarea {
 
 .summary-value {
   color: var(--text-primary);
+  font-size: var(--fz-body);
   flex: 1;
   word-break: break-all;
   white-space: pre-wrap;
@@ -1092,7 +1090,7 @@ textarea {
   border: none;
   border-radius: 25px;
   padding: 14px;
-  font-size: 0.95rem;
+  font-size: var(--fz-body);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1104,7 +1102,7 @@ textarea {
   border: none;
   border-radius: 25px;
   padding: 14px;
-  font-size: 0.95rem;
+  font-size: var(--fz-body);
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3);
@@ -1119,20 +1117,20 @@ textarea {
 }
 
 .success-icon {
-  font-size: 3.5rem;
+  font-size: var(--fz-title);
   color: var(--primary-color);
   margin-bottom: 15px;
 }
 
 .success-title {
   font-family: var(--font-serif);
-  font-size: 1.5rem;
+  font-size: var(--fz-h2);
   color: var(--primary-color);
   margin-bottom: 15px;
 }
 
 .success-message {
-  font-size: 0.95rem;
+  font-size: var(--fz-body);
   color: var(--text-muted);
   line-height: 1.8;
   margin-bottom: 30px;
@@ -1167,6 +1165,6 @@ textarea {
 
   .summary-label {
     min-width: auto;
-    font-size: 0.82rem;
+    font-size: var(--fz-sub);
   }
 }
