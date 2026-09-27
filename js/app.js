@@ -119,7 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==========================================================================
 
   /**
-   * 全画面オープニング アニメーション (封筒開封演出・ボタンクリック必須)
+   * 全画面オープニング アニメーション (3ステップ・シームレス全画面拡大モーフィング)
    */
   function initOpeningOverlay() {
     const overlay = document.getElementById("openingOverlay");
@@ -133,13 +133,18 @@ document.addEventListener("DOMContentLoaded", () => {
       if (isOpening) return;
       isOpening = true;
 
-      // 1. 3D封筒のフタが開き、中の招待状カードが飛び出す
+      // ステップ1: 封筒フラップが開き、手紙カードが飛び出す (0ms)
       container.classList.add("open");
 
-      // 2. 開封アニメーション演出完了後 (1.5秒後)、全体をフェードアウトしてメイン画面を表示
+      // ステップ2: 0.7秒後、手紙カードが全画面へ向けてスムーズに拡大モーフィング (700ms)
+      setTimeout(() => {
+        container.classList.add("expanding");
+      }, 700);
+
+      // ステップ3: 1.8秒後、手紙カードが画面全体を覆った状態でオーバーレイをフェード接続 (1800ms)
       setTimeout(() => {
         overlay.classList.add("closed");
-      }, 1500);
+      }, 1800);
     }
 
     // ★ ボタン押下必須（自動タイマー・画面背景タップでの勝手な遷移は行いません）
