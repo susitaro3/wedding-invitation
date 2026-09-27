@@ -158,6 +158,81 @@ function testSendEmail() {
 }
 
 /**
+ * 🔑 【マクロ】Tokensシートの苗字・名前から一意なハッシュトークンを自動生成する関数
+ *
+ * 苗字（LastName）および名前（FirstName）が両方入力されている行に限って処理を行います。
+ */
+function generateTokensFromNames() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var tokenSheet = getSheetByNameLoose(ss, 'Tokens');
+
+  var ui;
+  try {
+    ui = SpreadsheetApp.getUi();
+  } catch (e) {
+    ui = null;
+  }
+
+  if (!tokenSheet) {
+    if (ui) ui.alert('エラー: Tokensシートが見つかりません。');
+    return;
+  }
+
+  var tokenMap = getHeaderColumnMap(tokenSheet);
+  var colToken = tokenMap['token'];
+  var colLastName = tokenMap['lastname'];
+  var colFirstName = tokenMap['firstname'];
+
+  if (!colToken || !colLastName || !colFirstName) {
+    if (ui) ui.alert('エラー: Tokensシートに Token, LastName, FirstName 列が見つかりません。');
+    return;
+  }
+
+  var tokenData = getActiveSheetValues(tokenSheet);
+  if (tokenData.length <= 1) {
+    if (ui) ui.alert('Tokensシートにデータ行が存在しません。');
+    return;
+  }
+
+  var updatedCount = 0;
+  var salt = 'wedding_token_salt_2026';
+
+  for (var r = 1; r < tokenData.length; r++) {
+    var rowLn = tokenData[r][colLastName - 1] ? tokenData[r][colLastName - 1].toString().trim() : '';
+    var rowFn = tokenData[r][colFirstName - 1] ? tokenData[r][colFirstName - 1].toString().trim() : '';
+
+    // 苗字（LastName）と名前（FirstName）の両方が空欄でない行に限って処理
+    if (rowLn !== '' && rowFn !== '') {
+      var hashToken = generateShortHash(rowLn + '_' + rowFn + '_' + salt + '_' + r);
+      tokenSheet.getRange(r + 1, colToken).setValue(hashToken);
+      updatedCount++;
+    }
+  }
+
+  SpreadsheetApp.flush();
+
+  var msg = '完了: ' + updatedCount + ' 件の行について、苗字と名前から一意なハッシュトークンを生成・更新いたしました。';
+  Logger.log(msg);
+  if (ui) ui.alert(msg);
+}
+
+/**
+ * 苗字・名前文字列から16桁の16進数URLセーフハッシュトークンを生成するヘルパー関数
+ */
+function generateShortHash(str) {
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, str, Utilities.Charset.UTF_8);
+  var hash = '';
+  for (var i = 0; i < 8; i++) {
+    var byteVal = bytes[i];
+    if (byteVal < 0) byteVal += 256;
+    var hex = byteVal.toString(16);
+    if (hex.length === 1) hex = '0' + hex;
+    hash += hex;
+  }
+  return hash;
+}
+
+/**
  * ヘッダー行のスタイル装飾ヘルパー
  */
 function formatHeaderRow(sheet, colCount, headerBgColor) {
@@ -420,6 +495,40 @@ function handlePostalCodeSearch(zip, callback) {
   return responseJSON({ success: false, error: '該当する住所が見つかりませんでした。' }, callback);
 }
 
+/**
+ * 🔒 当日の特定のトークンによる回答・更新送信回数をカウントする関数 (1日20回制限用)
+ */
+function getTodaySubmissionCount(responseSheet, token) {
+  if (!responseSheet || !token) return 0;
+  var respData = getActiveSheetValues(responseSheet);
+  if (respData.length <= 1) return 0;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var timeZone = ss.getSpreadsheetTimeZone();
+  var todayStr = Utilities.formatDate(new Date(), timeZone, 'yyyy-MM-dd');
+
+  var count = 0;
+  var colTimestamp = 0; // A列: Timestamp
+  var colToken = 1;     // B列: Token
+
+  for (var r = 1; r < respData.length; r++) {
+    var rowToken = respData[r][colToken] ? respData[r][colToken].toString().trim() : '';
+    if (rowToken === token.trim()) {
+      var rowDate = respData[r][colTimestamp];
+      if (rowDate) {
+        var rowDateStr = (rowDate instanceof Date)
+          ? Utilities.formatDate(rowDate, timeZone, 'yyyy-MM-dd')
+          : rowDate.toString().substring(0, 10);
+
+        if (rowDateStr === todayStr) {
+          count++;
+        }
+      }
+    }
+  }
+  return count;
+}
+
 function doPost(e) {
   try {
     var contents = e.postData ? e.postData.contents : null;
@@ -457,6 +566,15 @@ function doPost(e) {
 
     if (tokenRowIndex === -1) {
       return responseJSON({ success: false, error: '無効なトークンです。' });
+    }
+
+    // 🔒 レート制限（Rate Limiting）：同一トークンからの1日あたり送信回数上限チェック（最大20回/日）
+    var todayCount = getTodaySubmissionCount(responseSheet, token);
+    if (todayCount >= 20) {
+      return responseJSON({
+        success: false,
+        error: 'セキュリティ制限：1日あたりの回答・更新回数上限（20回）に達しました。明日以降に再度お試しいただくか、管理者へお問い合わせください。'
+      });
     }
 
     // 送信パラメーター
