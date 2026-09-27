@@ -192,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 回答完了時の画面表示切り替え（スライドショーを隠し、ending.jpgおよび完了通知メッセージを表示）
+   * 画面上でフォーム送信が完了した瞬間の画面表示切り替え（スライドショーを隠し、ending.jpgおよび完了通知を表示）
    */
   function switchToCompletedState() {
     if (heroSuccessNotice) heroSuccessNotice.classList.remove("hidden");
@@ -453,14 +453,17 @@ document.addEventListener("DOMContentLoaded", () => {
       predefinedProxyWrapper.classList.add("hidden");
     }
 
-    // もし過去に回答済み（出欠の登録がある）の場合のみ、回答完了状態（ending.jpg）を表示
-    if (existingResp && existingResp.attendance) {
-      switchToCompletedState();
+    // 初期画面表示: 過去回答データの有無に関わらず、初期読み込み時は常にスライドショーを表示！ (ending.jpgは送信完了時のみ)
+    switchToInitialState();
 
-      const attendanceRadio = document.querySelector(`input[name="attendance"][value="${existingResp.attendance}"]`);
-      if (attendanceRadio) {
-        attendanceRadio.checked = true;
-        toggleAttendanceSections(existingResp.attendance);
+    // もし過去の回答データが存在する場合、フォームに値を復元セット
+    if (existingResp) {
+      if (existingResp.attendance) {
+        const attendanceRadio = document.querySelector(`input[name="attendance"][value="${existingResp.attendance}"]`);
+        if (attendanceRadio) {
+          attendanceRadio.checked = true;
+          toggleAttendanceSections(existingResp.attendance);
+        }
       }
 
       if (existingResp.lastName) lastNameInput.value = existingResp.lastName;
@@ -480,8 +483,6 @@ document.addEventListener("DOMContentLoaded", () => {
         restorePredefinedProxiesResponse(existingResp.predefinedProxiesResponse);
       }
     } else {
-      // 未回答時の初期状態: 必ずスライドショーを表示し、ending.jpgを隠す！
-      switchToInitialState();
       toggleAttendanceSections("出席");
     }
 
@@ -1045,7 +1046,7 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmModal.classList.remove("active");
         rsvpForm.classList.add("hidden");
 
-        // 🚀 回答完了画面切り替え（スライドショーを隠し、ending.jpg表示）
+        // 🚀 ★【改修点】画面上で実際にフォーム送信ボタンが押された瞬間のみ switchToCompletedState() を実行！
         switchToCompletedState();
 
         // 完了画面へ切り替え
